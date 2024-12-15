@@ -37,7 +37,13 @@ git commit -m"说明"
 5.远程连接
 
 ~~~properties
-git remote add origin git@github.com:ABU12111/college.git
+git remote add origin git@github.com:ABU121111/college.git
+~~~
+
+如果出现rejected，就是没有连接到分支
+
+~~~properties
+git pull --rebase orifin master
 ~~~
 
 6.推送
@@ -74,4 +80,4 @@ git commit -m"temp"
 git push
 ~~~
 
-                                   
+​                                   
