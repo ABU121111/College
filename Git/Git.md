@@ -77,7 +77,32 @@ git commit -m"temp"
 4.推送
 
 ~~~properties
-git push
+git push  
 ~~~
 
-​                                   
+## 3.更新
+
+1.拉取
+
+~~~properties
+git pull origin master
+~~~
+
+2.添加
+
+~~~properties
+git add .
+~~~
+
+3.提交
+
+~~~properties
+git commit -m "new"
+~~~
+
+4.推送
+
+~~~properties
+git push origin master
+~~~
+
