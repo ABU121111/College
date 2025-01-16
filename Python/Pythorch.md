@@ -301,3 +301,232 @@ writer.close()
 
 ## 4.torchvision
 
+### 4.1 Dataset_Transforms
+
+从torchvision.datasets.CIFAR10上拉取训练集和测试集，然后使用**Compose**进行类型转换，转换成**Tensor**类型
+
+~~~python
+import torchvision
+#转换
+dataset_transforms = torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor()
+])
+#拉取数据集
+trains_set = torchvision.datasets.CIFAR10(root="./data", train=True, transform= dataset_transforms,download=True)
+test_set = torchvision.datasets.CIFAR10(root="./data", train=False, transform= dataset_transforms,download=True)
+
+print(trains_set[0])
+~~~
+
+之后可以显示数据集，利用Tesnsorboard进行显示
+
+~~~python
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
+
+from TensonBoard import writer
+
+dataset_transforms = torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor()
+])
+
+trains_set = torchvision.datasets.CIFAR10(root="./data", train=True, transform= dataset_transforms,download=True)
+test_set = torchvision.datasets.CIFAR10(root="./data", train=False, transform= dataset_transforms,download=True)
+
+#print(trains_set[0])
+
+writer = SummaryWriter("TorchBoard")
+for i in range (10):
+    img,target = test_set[i]
+    writer.add_image("test_set", img, i)
+
+writer.close()
+~~~
+
+结果如图所示：
+
+<img src="image/image-20250116155857203.png" alt="image-20250116155857203" style="zoom:67%;" />
+
+### 4.2 DataLoader
+
+加载数据集到神经网络
+
+~~~python
+import torchvision
+from torch.utils.data import DataLoader
+
+test_data = torchvision.datasets.CIFAR10(root="./data", train=False, transform= torchvision.transforms.ToTensor(),download=True)
+#train表示是否训练
+#transforms使用torchvision自带的ToTensor方法
+
+test_loader = DataLoader(test_data, batch_size=4, shuffle=True,num_workers=0,drop_last=False)
+#`test_data`: 数据集对象，这里是CIFAR-10测试集。
+#`batch_size=4`: 每个批次加载4个样本。
+#`shuffle=True`: 在每个epoch开始时打乱数据。
+#`num_workers=0`: 数据加载时使用的子进程数，0表示使用主进程。
+#`drop_last=False`: 如果数据集大小不能被`batch_size`整除，是否丢弃最后一个不完整的批次，False表示不丢弃。
+
+#测试数据集中第一张图片及其标签
+img,target =  test_data[0]
+#打印蹄片张量数据
+print(img.shape)
+print(target)
+~~~
+
+使用循环加入来打印数据集
+
+~~~python
+step= 0
+for data in test_loader:
+    imgs,targets = data
+    print(imgs.shape)
+    print(targets)
+    step +=1
+~~~
+
+使用Tensorboard展示数据集
+
+~~~python
+writer = SummaryWriter("dataloader")
+step= 0
+for data in test_loader:
+    imgs, targets = data
+    #注意输入格式是否匹配
+    writer.add_image("test_loader1", imgs, step,dataformats="NCHW")
+    step += 1
+
+writer.close()
+~~~
+
+结果如图所示：
+
+<img src="image/image-20250116172234958.png" alt="image-20250116172234958" style="zoom:67%;" />
+
+## 5.Neural Network
+
+### 5.1 Module
+
+定义一个神经网络，实例化后进行各项操作，下只展示简单操作，因为多的我还不会
+
+~~~python
+import torch
+from torch import nn
+
+class Net(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def forward(self, x):
+        return x+1
+
+net=Net()
+x=torch.tensor(1.0)
+print(net(x))
+~~~
+
+### 5.2 Convolution Layer
+
+对矩阵进行卷积操作，矩阵维数可选，下面只演示二维矩阵卷积操作并输出卷积结果
+
+- 定义原矩阵和卷积矩阵
+- 使用reshape进行格式转换，将张量转换为四维格式
+- 使用functional进行卷积，注意**stride**是位移，**padding**是填充，默认是0
+
+~~~python
+import torch
+import torch.nn.functional as F
+
+#原矩阵
+input = torch.tensor([[1,2,0,3,1],
+                      [0,1,2,3,1],
+                      [1,2,1,0,0],
+                      [5,2,3,1,1],
+                      [2,1,0,1,1]])
+
+#卷积矩阵
+kernel = torch.tensor([[1,2,1],
+                       [0,1,0],
+                       [2,1,0]])
+
+#格式转换
+input = torch.reshape(input, (1,1,5,5))
+kernel = torch.reshape(kernel, (1,1,3,3))
+
+#卷积
+#stride是位移，可以是元组，也可以是整数（表示横纵方向的位移一样）
+output = F.conv2d(input, kernel, stride=1, padding=0)
+#padding是填充，可以是元组，也可以是整数（表示横纵方向的填充一样,默认是0）
+output1 = F.conv2d(input, kernel, stride=1, padding=1)
+
+print(output)
+print(output1)
+~~~
+
+输出如下：
+
+~~~bash
+tensor([[[[10, 12, 12],
+          [18, 16, 16],
+          [13,  9,  3]]]])
+tensor([[[[ 1,  3,  4, 10,  8],
+          [ 5, 10, 12, 12,  6],
+          [ 7, 18, 16, 16,  8],
+          [11, 13,  9,  3,  4],
+          [14, 13,  9,  7,  4]]]])
+~~~
+
+接下来是卷积实战，将图片进行卷积操作，注意选择正确的包，torch.nn.Conv2d
+
+- 使用dataset导入数据集，这里使用测试集，并且转换成Tensor格式
+- 使用dataloader将数据集打包成可迭代对象，64为一组
+- 构造神经网络类，初始化方法中将输入通道，输出通道，卷积格式和位移，填充给出
+- 构造forward方法用来返回卷积结果
+- TensorBoard中接受三个通道，但是输出为6个，需要进行简单的格式转换
+
+~~~python
+import torch
+import torchvision.datasets
+from torch.nn import Conv2d
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from torch import nn
+
+dataset = torchvision.datasets.CIFAR10(root='./data', train=False, transform=torchvision.transforms.ToTensor(),
+                                       download=True)
+
+dataloader = DataLoader(dataset, batch_size=64)
+
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        # 3 input image channel, 6 output channels, 3x3 square convolution
+        self.conv1 = Conv2d(3, 6, 3, 1, 0)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        return x
+
+
+net = Net()
+
+writer = SummaryWriter('logs')
+
+step = 0
+for data in dataloader:
+    imgs,targets = data
+    output = net(imgs)
+    #torch.Size([64, 3, 32, 32])
+    writer.add_images('input', imgs, step)
+    #torch.Size([64, 6, 30, 30]) -> torch.Size([xxx, 3, 30, 30])
+    output = torch.reshape(output, (-1, 3, 30, 30))
+    writer.add_images('output', output, step)
+
+    step += 1
+
+writer.close()
+~~~
+
+输出结果如下图所示：
+
+<img src="image/image-20250117001537675.png" alt="image-20250117001537675" style="zoom:67%;" />
