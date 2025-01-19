@@ -530,3 +530,536 @@ writer.close()
 输出结果如下图所示：
 
 <img src="image/image-20250117001537675.png" alt="image-20250117001537675" style="zoom:67%;" />
+
+### 5.3Pooling Layer
+
+使用池化层可以将显著降低神经网络中的训练量，相关参数如下：
+
+- **kernel_size**：卷积层大小
+- **stride**：位移大小，默认是kernel_size
+- **padding**：填充大小
+- **dilation**：降低数据集的关键，通过设置可以将卷积层映射时间隔对应数值
+- **ceil_mode**：True为向上取整，接受该区域；False为向下取整，不接受该区域
+
+下面是示例代码，使用tensor数据将获得最大线池：
+
+~~~python
+import torch
+from torch import nn
+
+input = torch.tensor([[1,2,0,3,1],
+                      [0,1,2,3,1],
+                      [1,2,1,0,0],
+                      [5,2,3,1,1],
+                      [2,1,0,1,1]],dtype=torch.float32)
+
+input = torch.reshape(input, (-1,1,5,5))
+#-1：自动计算该维度的大小，以确保总元素数量不变。
+#1：通道数，表示单通道（例如灰度图像）。
+#5：高度，表示重塑后的张量的高度为5。
+#5：宽度，表示重塑后的张量的宽度为5
+print(input.shape)
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.maxPool = nn.MaxPool2d(kernel_size=3,ceil_mode=True)
+
+    def forward(self, input):
+        input= self.maxPool(input)
+        return input
+
+net=Net()
+output=net(input)
+print(output)
+~~~
+
+结果如下：
+
+~~~bash
+torch.Size([1, 1, 5, 5])
+tensor([[[[2., 3.],
+          [5., 1.]]]])
+~~~
+
+接下来是小小实战篇，现在导入数据集进行实验，将图片进行最大池化，代码如下：
+
+~~~python
+import torch
+import torchvision
+from torch import nn
+from torch.nn import MaxPool2d
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+dataset = torchvision.datasets.CIFAR10(root='../data', train=False, transform=torchvision.transforms.ToTensor(),download=True)
+
+dataloader = DataLoader(dataset, batch_size=64)
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.maxPool = nn.MaxPool2d(kernel_size=3,ceil_mode=True)
+
+    def forward(self, input):
+        input= self.maxPool(input)
+        return input
+
+net=Net()
+
+writer = SummaryWriter('../logs_maxpool')
+step = 0
+for data in dataloader:
+    imgs,targets = data
+    writer.add_images('input', imgs,step)
+    output = net(imgs)
+    writer.add_images('output', output, step)
+    step+=1
+
+writer.close()
+~~~
+
+结果如下所示：
+
+<img src="image/image-20250119140403655.png" alt="image-20250119140403655" style="zoom:67%;" />
+
+明显感觉处理后的图片变得模糊，但是保留原始数据特征，大大减小工作量
+
+### 5.4 Non-linear Activations
+
+非线性变换，主要提高模型泛化能力，使得模型能更加贴合实际需求，以下仅展示sigmoid方法的使用
+
+~~~python
+import torch
+import torchvision
+from torch import nn
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+dataset = torchvision.datasets.CIFAR10(root='../data', train=False,
+                                       transform=torchvision.transforms.ToTensor(),download=True)
+
+dataloader = DataLoader(dataset, batch_size=64)
+
+class R_net(nn.Module):
+    def __init__(self):
+        super(R_net, self).__init__()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input):
+        input= self.sigmoid(input)
+        return input
+
+net=R_net()
+
+writer = SummaryWriter('../logs_relu')
+step = 0
+for data in dataloader:
+    imgs,targets = data
+    writer.add_images('input', imgs,step)
+    output = net(imgs)
+    writer.add_images('output', output, step)
+    step+=1
+
+writer.close()
+~~~
+
+以下为结果：
+
+<img src="image/image-20250119143807305.png" alt="image-20250119143807305" style="zoom:67%;" />
+
+### 5.5 Linear
+
+线性层通过使用矩阵乘法并加上偏置项，将数据特征最终映射到输出空间
+
+- 首先打印imgs.shape获取图片大小
+- 使用nn.linear将数据转换
+- 使用torch.reshape进行转换
+- 还可以使用**torch.flatten**进行平铺转换
+
+~~~python
+import torch
+import torchvision
+from torch.utils.data import DataLoader
+from torch import nn
+
+dataset = torchvision.datasets.CIFAR10(root="../data", train=False, transform=torchvision.transforms.ToTensor(), download=True)
+
+dataloader = DataLoader(dataset=dataset, batch_size=64)
+
+class Net (nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.linear=nn.Linear(in_features=196608,out_features=10)
+
+    def forward(self, input):
+        output = self.linear(input)
+        return output
+
+net = Net()
+
+for data in dataloader:
+    imgs, targets = data
+    print(imgs.shape)
+    output = torch.reshape(imgs, (1,1,1,-1))
+    #output = torch.flatten(imgs)
+    #torch.Size([64, 3, 32, 32])
+	#torch.Size([196608])
+	#torch.Size([10])
+    print(output.shape)
+    output = net(output)
+    print(output.shape)
+~~~
+
+输出结果如下：
+
+~~~properties
+torch.Size([64, 3, 32, 32])
+torch.Size([1, 1, 1, 196608])
+torch.Size([1, 1, 1, 10])
+torch.Size([64, 3, 32, 32])
+torch.Size([1, 1, 1, 196608])
+torch.Size([1, 1, 1, 10])
+torch.Size([64, 3, 32, 32])
+torch.Size([1, 1, 1, 196608])
+torch.Size([1, 1, 1, 10])
+torch.Size([64, 3, 32, 32])
+torch.Size([1, 1, 1, 196608])
+torch.Size([1, 1, 1, 10])
+torch.Size([64, 3, 32, 32])
+torch.Size([1, 1, 1, 196608])
+torch.Size([1, 1, 1, 10])
+......
+~~~
+
+### 5.6 Sequential
+
+Sequential指一种容器模块，用来集合神经网络中的多层计算
+
+以下图为例，进行多层卷积/池化计算
+
+![image-20250119153238070](image/image-20250119153238070.png)
+
+**Ps**：注意第一步卷积后并未改变其尺寸，需根据公式计算Stride和padding
+$$
+H_{out} = \left\lfloor \frac{H_{in} + 2 \times \text{padding}[0] - \text{dilation}[0] \times (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1 \right\rfloor 
+$$
+代入数据计算得stride=1，padding=2
+
+代码如下：
+
+- 使用Sequential进行集合化，简化代码结构
+- 使用torch.ones创建初始化数据
+
+~~~python
+import torch
+from torch import nn
+from torch.nn import Sequential, Conv2d, MaxPool2d, Flatten, Linear
+
+
+class Test(nn.Module):
+    def __init__(self):
+        super(Test, self).__init__()
+        self.model1 = Sequential(
+            Conv2d(in_channels=3,out_channels=32,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Conv2d(in_channels=32,out_channels=32,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Conv2d(in_channels=32,out_channels=64,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Flatten(),
+            Linear(in_features=64*4*4,out_features=64),
+            Linear(in_features=64,out_features=10)
+        )
+
+    def forward(self, input):
+        output = self.model1(input)
+        return output
+
+model = Test()
+print(model)
+input = torch.ones((64,3,32,32))
+output = model(input)
+print(output.shape)
+~~~
+
+结果如下：
+
+~~~bash
+Test(
+  (model1): Sequential(
+    (0): Conv2d(3, 32, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+    (1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (2): Conv2d(32, 32, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+    (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (4): Conv2d(32, 64, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+    (5): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (6): Flatten(start_dim=1, end_dim=-1)
+    (7): Linear(in_features=1024, out_features=64, bias=True)
+    (8): Linear(in_features=64, out_features=10, bias=True)
+  )
+)
+torch.Size([64, 10])
+~~~
+
+### 5.7 Loss Function
+
+- L1loss
+
+绝对值误差，可以用平均数也可以用求和
+
+~~~python
+import  torch
+from torch import nn
+from torch.nn import L1Loss
+
+inputs= torch.tensor([1,2,3],dtype=torch.float32)
+target = torch.tensor([1,2,5],dtype=torch.float32)
+#绝对值误差
+loss = L1Loss()
+resut = loss(inputs,target)
+
+print(resut)
+#tensor(0.6667)
+~~~
+
+- MSEloss
+
+均方差误差，平方后取平均
+
+~~~python
+import  torch
+from torch import nn
+from torch.nn import L1Loss
+
+inputs= torch.tensor([1,2,3],dtype=torch.float32)
+target = torch.tensor([1,2,5],dtype=torch.float32)
+#均方误差
+loss_mse = nn.MSELoss()
+result_mse = loss_mse(inputs,target)
+
+print(result_mse)
+#tensor(1.3333)
+~~~
+
+- CrossEntropyLoss 
+
+交叉熵误差，计算预测概率分布与真实概率分布的误差
+
+`CrossEntropyLoss` 期望输入的形状为 `(N,     C)`，其中 `N`是批量大小，`C`是类的数量。 ，所以一般要进行格式转换，例如：
+
+~~~python
+x=torch.tensor([0.1,0.2,0.3])
+x=torch.reshape(x,(1,3))
+~~~
+
+下为示例代码：
+
+~~~python
+import  torch
+from torch import nn
+from torch.nn import L1Loss
+
+x=torch.tensor([0.1,0.2,0.3])
+y=torch.tensor([1])
+x=torch.reshape(x,(1,3))
+loss_cross = nn.CrossEntropyLoss()
+resut_cross = loss_cross(x,y)
+print(resut_cross)
+#tensor(1.1019)
+~~~
+
+通过神经网络多层迭代，最后输出交叉熵
+
+~~~python
+from torch import nn
+from torch.nn import Conv2d, Sequential, MaxPool2d, Flatten, Linear
+import torchvision
+from torch.utils.data import DataLoader
+
+dataset = torchvision.datasets.CIFAR10(root="../data", train=False, transform= torchvision.transforms.ToTensor(),download=True)
+
+dataloader = DataLoader(dataset=dataset, batch_size=4)
+
+class Test(nn.Module):
+    def __init__(self):
+        super(Test, self).__init__()
+        self.model1 = Sequential(
+            Conv2d(in_channels=3,out_channels=32,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Conv2d(in_channels=32,out_channels=32,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Conv2d(in_channels=32,out_channels=64,kernel_size=5,padding=2),
+            MaxPool2d(2),
+            Flatten(),
+            Linear(in_features=64*4*4,out_features=64),
+            Linear(in_features=64,out_features=10)
+        )
+
+    def forward(self, input):
+        output = self.model1(input)
+        return output
+
+loss = nn.CrossEntropyLoss()
+model = Test()
+for data in dataloader:
+    imgs, targets = data
+    output = model(imgs)
+    result_loss = loss(output,targets)
+    print(result_loss)
+~~~
+
+输出为：
+
+~~~bash
+Files already downloaded and verified
+tensor(2.2567, grad_fn=<NllLossBackward0>)
+tensor(2.4100, grad_fn=<NllLossBackward0>)
+tensor(2.3432, grad_fn=<NllLossBackward0>)
+tensor(2.2962, grad_fn=<NllLossBackward0>)
+......
+~~~
+
+最后提一嘴，交叉熵可以进行反向传播，即找到该点所在梯度(**grad**)，然后选择合适优化器再找到最小误差，下面是反向传播，至于为什么没有优化器，因为下一节要讲。
+
+~~~python
+    result_loss = loss(output,targets)
+    result_loss.backward()
+~~~
+
+## 6.Optimizer
+
+优化器优化梯度找到最优解，主要就是每轮先归零，然后计算，然后更新，下面是示例代码：
+
+~~~python
+#沿用上一小节的神经网络
+loss = nn.CrossEntropyLoss()
+model = Test()
+#训练速度为0.01
+optim =torch.optim.SGD(model.parameters(),lr=0.01)
+
+for data in dataloader:
+    imgs, targets = data
+    output = model(imgs)
+    result_loss = loss(output,targets)
+    #梯度清零
+    optim.zero_grad()
+    #计算梯度
+    result_loss.backward()
+    #更新参数
+    optim.step()
+    print(result_loss)
+~~~
+
+由代码执行结果可知，一轮学习效果并不显著，因此进行多轮循环：
+
+~~~python
+loss = nn.CrossEntropyLoss()
+model = Test()
+optim =torch.optim.SGD(model.parameters(),lr=0.01)
+for i in range(15):
+    running_loss = 0.0
+    for data in dataloader:
+        imgs, targets = data
+        output = model(imgs)
+        result_loss = loss(output,targets)
+        #梯度清零
+        optim.zero_grad()
+        #计算梯度
+        result_loss.backward()
+        #更新参数
+        optim.step()
+        running_loss += result_loss
+    print(running_loss)
+~~~
+
+执行效果如下所示：
+
+~~~bash
+Files already downloaded and verified
+tensor(4944.0220, grad_fn=<AddBackward0>)
+tensor(4031.8301, grad_fn=<AddBackward0>)
+tensor(3591.5593, grad_fn=<AddBackward0>)
+tensor(3255.7888, grad_fn=<AddBackward0>)
+tensor(2955.4282, grad_fn=<AddBackward0>)
+tensor(2669.7776, grad_fn=<AddBackward0>)
+tensor(2382.5964, grad_fn=<AddBackward0>)
+tensor(2115.8455, grad_fn=<AddBackward0>)
+tensor(1900.5393, grad_fn=<AddBackward0>)
+tensor(1718.2169, grad_fn=<AddBackward0>)
+tensor(1574.7793, grad_fn=<AddBackward0>)
+tensor(1475.2067, grad_fn=<AddBackward0>)
+tensor(1337.7804, grad_fn=<AddBackward0>)
+tensor(1370.9921, grad_fn=<AddBackward0>)
+tensor(1191.4083, grad_fn=<AddBackward0>)
+~~~
+
+## 7.Torchvision Models
+
+### 7.1 ImageNet
+
+pytorch提供许多训练好的网络模型，本处以ImageNet为例：
+
+~~~python
+import torchvision
+from torch import nn
+#屏蔽的原因是这玩意一百四十个G，比黑神话还大，没辙
+# train_data = torchvision.datasets.ImageNet(root="../Data_image_net", train=False,
+#                                            transform=torchvision.transforms.ToTensor(), download=True)
+
+vgg16_false = torchvision.models.vgg16(pretrained=False)
+vgg16_true = torchvision.models.vgg16(pretrained=True)
+
+print(vgg16_false)
+print(vgg16_true)
+~~~
+
+结果如图所示
+
+<img src="image/image-20250119204806737.png" alt="image-20250119204806737" style="zoom:67%;" />
+
+- 其中第一个是未训练的模型，使用的随机参数，需要经过训练才可以使用
+
+- 第二个是训练后的模型，使用已经训练好的数据
+
+网络模型还支持修改神经网络，可以修改参数或者添加层数，支持各种各样的修改
+
+~~~python
+vgg16_true.classifier.add_module("new", nn.Linear(in_features=1000, out_features=10))
+
+vgg16_false.classifier[6] = nn.Linear(in_features=4096, out_features=10)
+
+vgg16_false.classifier=nn.Sequential(*list(vgg16_false.classifier.children())[:-1],nn.Linear(in_features=4096,out_features=10))
+~~~
+
+### 7.2 Model Save
+
+**方式一**：模型结构+参数
+
+~~~python
+import torch
+import torchvision
+
+vgg16 = torchvision.models.vgg16(pretrained=True)
+#保存方式1 模型结构+模型参数
+torch.save(vgg16, "vgg16.method1.pth")
+#使用方法 文件路径
+model = torch.load("vgg16.method1.pth")
+~~~
+
+**Ps**：加载模型时需要将模型类移过来，比较麻烦
+
+**方式二**：模型参数(**官方推荐**)
+
+```python
+import torch
+import torchvision
+
+vgg16 = torchvision.models.vgg16(pretrained=True)
+#保存方式2 模型参数
+torch.save(vgg16.state_dict(), "vgg16.method2.pth")
+#使用方式
+vgg16 = torchvision.models.vgg16(pretrained=False)
+vgg16.load_state_dict(torch.load("vgg16.method2.pth"))
+```
+
