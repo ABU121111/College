@@ -1063,3 +1063,205 @@ vgg16 = torchvision.models.vgg16(pretrained=False)
 vgg16.load_state_dict(torch.load("vgg16.method2.pth"))
 ```
 
+## 8.Completed Model
+
+集合上述所有知识所形成的基本的模型框架以及展示效果
+
+- 准备数据集
+- 加载数据集
+- 引入模型
+- 损失函数
+- 优化器
+- 设置参数
+- 训练步骤->训练，梯度下降，打印结果
+- 测试步骤->忽视梯度，计算准确率，添加数据
+- 保存模型
+
+~~~python
+import torch
+import torchvision
+from torch import nn
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+from model import *
+
+#准备数据集
+train_data = torchvision.datasets.CIFAR10(root='../data', train=True, download=True,
+                                          transform=torchvision.transforms.ToTensor())
+
+#准备测试数据集
+test_data = torchvision.datasets.CIFAR10(root='../data', train=False, download=True,
+                                         transform=torchvision.transforms.ToTensor())
+
+#利用dataloader加载数据集
+train_dataloader = DataLoader(train_data, batch_size=64)
+test_dataloader = DataLoader(test_data, batch_size=64)
+
+#创建网络模型
+net = Net()
+
+#损失函数
+loss_fn = nn.CrossEntropyLoss()
+
+#优化器
+learning_rate = 1e-2
+optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate)
+
+#设置训练网络的一些参数
+#记录训练的次数
+total_train_step = 0
+#记录测试的次数
+total_test_step = 0
+#训练的轮数
+epochs = 10
+
+#添加tensorboard
+writer = SummaryWriter('../logs_train')
+
+for i in range(epochs):
+    print("-----第{}轮训练-----".format(i+1))
+
+    #训练步骤
+    for data in train_dataloader:
+        imgs, targets = data
+        output = net(imgs)
+        loss = loss_fn(output, targets)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        #逢100次打印一次
+        total_train_step += 1
+        if total_train_step % 100 == 0:
+            print("训练次数：{}, Loss:{}".format(total_train_step, loss.item()))
+            writer.add_scalar("train_loss", scalar_value=loss.item(), global_step=total_train_step)
+
+    #测试步骤
+    total_test_loss = 0
+    total_accuracy = 0
+    with torch.no_grad():
+        for data in test_dataloader:
+            imgs, targets = data
+            output = net(imgs)
+            loss = loss_fn(output, targets)
+            total_test_loss += loss
+            #计算准确率
+            accuracy = (output.argmax(1)==targets).sum()
+            total_accuracy += accuracy
+
+    print("整体测试集上的Loss:{}".format(total_test_loss))
+    writer.add_scalar("test_loss", scalar_value=total_test_loss, global_step=total_test_step)
+    writer.add_scalar("test_accuracy", scalar_value=total_accuracy/len(test_data), global_step=total_test_step)
+    total_test_step += 1
+
+    #torch.save(net.state_dict(),"net_{}.pth".format(i))
+    torch.save(net,"net_{}.pth".format(i+1))
+
+writer.close()
+~~~
+
+结果之一如下，至于为什么是之一，因为懒得跑了
+
+<img src="image/image-20250120185840554.png" alt="image-20250120185840554" style="zoom:67%;" />
+
+因为模型很大，所以可以用GPU跑，一般将**模型**，**数据**，**损失函数**进行cuda
+
+~~~python
+#创建网络模型
+net = Net()
+net = net.cuda()
+
+#损失函数
+loss_fn = nn.CrossEntropyLoss()
+loss_fn = loss_fn.cuda()
+
+#训练步骤
+for data in train_dataloader:
+    imgs, targets = data
+    imgs = imgs.cuda()
+    targets = targets.cuda()
+    output = net(imgs)
+    loss = loss_fn(output, targets)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+~~~
+
+除了cuda方法，还有to方法，先定义设备，然后选择设备
+
+~~~python
+device = torch.device("cuda:0")
+#创建网络模型
+net = Net()
+net = net.to(device)
+
+#损失函数
+loss_fn = nn.CrossEntropyLoss()
+loss_fn = loss_fn.to(device)
+
+#训练步骤
+for data in train_dataloader:
+    imgs, targets = data
+    imgs = imgs.to(device)
+    targets = targets.to(device)
+    output = net(imgs)
+    loss = loss_fn(output, targets)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+~~~
+
+## 9.Prctice
+
+设计一个完整的模型用来测试
+
+~~~python
+import torch
+import torchvision
+from PIL import Image
+from torch import nn
+
+image_path = "../data/airplane.jpg"
+image = Image.open(image_path)
+print(image)
+
+
+transform = torchvision.transforms.Compose([torchvision.transforms.Resize((32, 32)),
+                                            torchvision.transforms.ToTensor()])
+
+image = transform(image)
+print(image.shape)
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(3, 32, 5, stride=1, padding=2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 32, 5, stride=1 ,padding=2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 5, stride=1, padding=2),
+            nn.MaxPool2d(2),
+            nn.Flatten(),
+            nn.Linear(64*4*4, 64),
+            nn.Linear(64, 10)
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+#如果没有指定再GPU上运行，需要指定map_location=torch.device('cpu')
+model = torch.load("net_29_gpu.pth",map_location=torch.device('cpu'))
+image = torch.reshape(image, (1, 3, 32, 32))
+model.eval()
+with torch.no_grad():
+    outputs = model(image)
+print(outputs)
+
+print(outputs.argmax(dim=1))
+~~~
+
