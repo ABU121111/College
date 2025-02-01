@@ -54,6 +54,38 @@ git pull --rebase orifin master
 git push -u origin master
 ~~~
 
+## 1.1提交特定分支
+
+1.初始化本地仓库
+
+~~~bash
+git init
+~~~
+
+2.远程连接
+
+~~~bash
+git remote add origin git@github.com:ABU121111/college.git
+~~~
+
+3.拉取分支
+
+~~~bash
+git fetch origin
+~~~
+
+4.选择分支
+
+~~~bash
+git checkout -b name origin/name
+~~~
+
+5.设置上游分支
+
+~~~bash
+git pull --set-upstream origin name
+~~~
+
 ## 2.删除
 
 1.预览
