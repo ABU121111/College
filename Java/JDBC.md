@@ -167,5 +167,31 @@ public class LoginTest {
 }
 ~~~
 
+## 2.Lombok
 
+使用注解来简化代码，不必每次造轮子
 
+我们通过添加@Getter和@Setter来为当前类的所有字段生成get/set方法，他们可以添加到类或是字段上，注意静态字段不会生成，final字段无法生成set方法。
+
+我们还可以使用@Accessors来控制生成Getter和Setter的样式。
+
+我们通过添加@ToString来为当前类生成预设的toString方法。
+
+我们可以通过添加@EqualsAndHashCode来快速生成比较和哈希值方法。
+
+我们可以通过添加@AllArgsConstructor和@NoArgsConstructor来快速生成全参构造和无参构造。
+
+我们可以添加@RequiredArgsConstructor来快速生成参数只包含final或被标记为@NonNull的成员字段。
+
+使用@Data能代表@Setter、@Getter、@RequiredArgsConstructor、@ToString、@EqualsAndHashCode全部注解。
+一旦使用@Data就不建议此类有继承关系，因为equal方法可能不符合预期结果（尤其是仅比较子类属性）。
+
+使用@Value与@Data类似，但是并不会生成setter并且成员属性都是final的。
+
+使用@SneakyThrows来自动生成try-catch代码块。
+
+使用@Cleanup作用与局部变量，在最后自动调用其close()方法（可以自由更换）
+
+使用@Builder来快速生成建造者模式。
+通过使用@Builder.Default来指定默认值。
+通过使用@Builder.ObtainVia来指定默认值的获取方式。
