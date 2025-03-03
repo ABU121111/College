@@ -389,9 +389,7 @@ public class Student {
 }
 ~~~
 
-除了这个注解之外，还有@PostConstruct和@PreDestroy，它们效果和init-method和destroy-method是一样的：
-
-​              java              复制代码                          
+除了这个注解之外，还有@PostConstruct和@PreDestroy，它们效果和init-method和destroy-method是一样的： 
 
 ```java
 @PostConstruct
@@ -414,7 +412,7 @@ public class Student {
 }
 ```
 
-要注册这个类的Bean，只需要添加@Component即可，然后配置一下包扫描：                   
+要注册这个类的Bean，只需要添加@Component即可，然后配置一下包扫描，容器会对包内所有带@Component的类注册                   
 
 ```java
 @Configuration
@@ -423,4 +421,373 @@ public class MainConfiguration {
 
 }
 ```
+
+## 2.Spring高级特性
+
+### 2.1Bean Aware
+
+在Spring中提供了一些以Aware结尾的接口，实现了Aware接口的bean在被初始化之后，可以获取相应资源。Aware的中文意思为**感知**。简单来说，他就是一个标识，实现此接口的类会获得某些感知能力，Spring容器会在Bean被加载时，根据类实现的感知接口，会调用类中实现的对应感知方法。
+
+比如BeanNameAware之类的以Aware结尾的接口，这个接口获取的资源就是BeanName：       
+
+```java
+@Component
+public class Student implements BeanNameAware {   //我们只需要实现这个接口就可以了
+
+    @Override
+    public void setBeanName(String name) {   //Bean在加载的时候，容器就会自动调用此方法，将Bean的名称给到我们
+        System.out.println("我在加载阶段获得了Bean名字："+name);
+    }
+}
+```
+
+### 2.2任务调度
+
+首先我们来看**异步任务**执行，需要使用Spring异步任务支持，我们需要在配置类上添加`@EnableAsync`注解。            
+
+```java
+@EnableAsync
+@Configuration
+@ComponentScan("com.test.bean")
+public class MainConfiguration {
+}
+```
+
+接着我们只需要在需要异步执行的方法上，添加`@Async`注解即可将此方法标记为异步，当此方法被调用时，会异步执行，也就是新开一个线程执行，而不是在当前线程执行。我们来测试一下：                   
+
+```java
+@Component
+public class Student {
+    public void syncTest() throws InterruptedException {
+        System.out.println(Thread.currentThread().getName()+"我是同步执行的方法，开始...");
+        Thread.sleep(3000);
+        System.out.println("我是同步执行的方法，结束！");
+    }
+
+    @Async
+    public void asyncTest() throws InterruptedException {
+        System.out.println(Thread.currentThread().getName()+"我是异步执行的方法，开始...");
+        Thread.sleep(3000);
+        System.out.println("我是异步执行的方法，结束！");
+    }
+}
+```
+
+现在我们在主方法中分别调用一下试试看：             
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfiguration.class);
+    Student student = context.getBean(Student.class);
+    student.asyncTest();   //异步执行
+    student.syncTest();    //同步执行
+}
+```
+
+可以看到，我们的任务执行结果为：
+
+![image-20221125153110860](https://oss.itbaima.cn/internal/markdown/2022/11/25/7VKh3dreROJUTcN.png)
+
+很明显，异步执行的任务并不是在当前线程启动的，而是在其他线程启动的，所以说并不会在当前线程阻塞，可以看到马上就开始执行下一行代码，调用同步执行的任务了。
+
+因此，当我们要将Bean的某个方法设计为异步执行时，就可以直接添加这个注解。但是需要注意，添加此注解要求方法的返回值只能是**void**或是**Future**类型才可以。
+
+**定时任务**
+
+Spring中的定时任务是全局性质的，当我们的Spring程序启动后，那么定时任务也就跟着启动了，我们可以在配置类上添加`@EnableScheduling`注解：               
+
+```java
+@EnableScheduling
+@Configuration
+@ComponentScan("com.test.bean")
+public class MainConfiguration {
+}
+```
+
+接着我们可以直接在配置类里面编写定时任务，把我们要做的任务写成方法，并添加`@Scheduled`注解：                 
+
+```java
+@Scheduled(fixedRate = 2000)   //单位依然是毫秒，这里是每两秒钟打印一次
+public void task(){
+    System.out.println("我是定时任务！"+new Date());
+}
+```
+
+![image-20221125155352390](https://oss.itbaima.cn/internal/markdown/2022/11/25/aGv7f3eBXPsFdYr.png)
+
+我们注意到`@Scheduled`中有很多参数，我们需要指定'cron', 'fixedDelay(String)', or 'fixedRate(String)'的其中一个，否则无法创建定时任务，他们的区别如下：
+
+- fixedDelay：在上一次定时任务执行完之后，间隔多久继续执行。
+- fixedRate：无论上一次定时任务有没有执行完成，两次任务之间的时间间隔。
+- cron：如果嫌上面两个不够灵活，你还可以使用cron表达式来指定任务计划。
+
+**cron**：https://blog.csdn.net/sunnyzyq/article/details/98597252
+
+## 3.SpringEL表达式
+
+### 3.1外部注入
+
+有些时候，我们甚至可以将一些外部配置文件中的配置进行读取，并完成注入。
+
+我们需要创建以`.properties`结尾的配置文件，这种配置文件格式很简单，类似于Map，需要一个Key和一个Value，中间使用等号进行连接，这里我们在resource目录下创建一个`test.properties`文件：                        
+
+```properties
+test.name=只因
+```
+
+这样，Key就是`test.name`，Value就是`只因`，我们可以通过一个注解直接读取到外部配置文件中对应的属性值，首先我们需要引入这个配置文件，我们可以在配置类上添加`@PropertySource`注解：
+
+```java
+@Configuration
+@ComponentScan("com.test.bean")
+@PropertySource("classpath:test.properties")   //注意，类路径下的文件名称需要在前面加上classpath:
+public class MainConfiguration{
+    
+}
+```
+
+接着，我们就可以开始快乐的使用了，我们可以使用 @Value 注解将外部配置文件中的值注入到任何我们想要的位置，就像我们之前使用@Resource自动注入一样：             
+
+```java
+@Component
+public class Student {
+    @Value("${test.name}")   //这里需要在外层套上 ${ }
+    private String name;   //String会被自动赋值为配置文件中对应属性的值
+
+    public void hello(){
+        System.out.println("我的名字是："+name);
+    }
+}
+```
+
+`@Value`中的`${...}`表示占位符，它会读取外部配置文件的属性值装配到属性中，如果配置正确没问题的话，这里甚至还会直接显示对应配置项的值：
+
+除了在字段上进行注入之外，我们也可以在需要注入的方法中使用：                    
+
+```java
+@Component
+public class Student {
+    private final String name;
+
+  	//构造方法中的参数除了被自动注入外，我们也可以选择使用@Value进行注入
+    public Student(@Value("${test.name}") String name){
+        this.name = name;
+    }
+
+    public void hello(){
+        System.out.println("我的名字是："+name);
+    }
+}
+```
+
+当然，如果我们只是想简单的注入一个常量值，也可以直接填入固定值：                       
+
+```java
+private final String name;
+public Student(@Value("10") String name){   //只不过，这里都是常量值了，我干嘛不直接写到代码里呢
+    this.name = name;
+}
+```
+
+### 3.2SpEL简单使用
+
+Spring官方为我们提供了一套非常高级SpEL表达式，通过使用表达式，我们可以更加灵活地使用Spring框架。
+
+首先我们来看看如何创建一个SpEL表达式：                 
+
+```java
+ExpressionParser parser = new SpelExpressionParser();
+Expression exp = parser.parseExpression("'Hello World'");  //使用parseExpression方法来创建一个表达式
+System.out.println(exp.getValue());   //表达式最终的运算结果可以通过getValue()获取
+```
+
+这里得到的就是一个很简单的 Hello World 字符串，字符串使用单引号囊括，SpEL是具有运算能力的。
+
+我们可以像写Java一样，对这个字符串进行各种操作，比如调用方法之类的：            
+
+```java
+Expression exp = parser.parseExpression("'Hello World'.toUpperCase()");   //调用String的toUpperCase方法
+System.out.println(exp.getValue());
+```
+
+![image-20221125173157008](https://oss.itbaima.cn/internal/markdown/2022/11/25/PZmheYn5EVTvURN.png)
+
+不仅能调用方法、还可以访问属性、使用构造方法等，是不是感觉挺牛的，居然还能这样玩。
+
+对于Getter方法，我们可以像访问属性一样去使用：                        
+
+```java
+//比如 String.getBytes() 方法，就是一个Getter，那么可以写成 bytes
+Expression exp = parser.parseExpression("'Hello World'.bytes");
+System.out.println(exp.getValue());
+```
+
+表达式可以不止一级，我们可以多级调用：                  
+
+```java
+Expression exp = parser.parseExpression("'Hello World'.bytes.length");   //继续访问数组的length属性
+System.out.println(exp.getValue());
+```
+
+是不是感觉挺好玩的？我们继续来试试看构造方法，其实就是写Java代码，只是可以写成这种表达式而已：                 
+
+```java
+Expression exp = parser.parseExpression("new String('hello world').toUpperCase()");
+System.out.println(exp.getValue());
+```
+
+![image-20221125173157008](https://oss.itbaima.cn/internal/markdown/2022/11/25/PZmheYn5EVTvURN.png)
+
+它甚至还支持根据特定表达式，从给定对象中获取属性出来：                    
+
+```java
+@Component
+public class Student {
+    private final String name;
+    public Student(@Value("${test.name}") String name){
+        this.name = name;
+    }
+
+    public String getName() {    //比如下面要访问name属性，那么这个属性得可以访问才行，访问权限不够是不行的
+        return name;
+    }
+}            
+```
+
+```java
+Student student = context.getBean(Student.class);
+ExpressionParser parser = new SpelExpressionParser();
+Expression exp = parser.parseExpression("name");
+System.out.println(exp.getValue(student));    //直接读取对象的name属性
+```
+
+拿到对象属性之后，甚至还可以继续去处理：                      
+
+```java
+Expression exp = parser.parseExpression("name.bytes.length");   //拿到name之后继续getBytes然后length
+```
+
+除了获取，我们也可以调用表达式的setValue方法来设定属性的值：                      
+
+```java
+Expression exp = parser.parseExpression("name");
+exp.setValue(student, "刻师傅");   //同样的，这个属性得有访问权限且能set才可以，否则会报错
+```
+
+除了属性调用，我们也可以使用运算符进行各种高级运算：                     
+
+```java
+Expression exp = parser.parseExpression("66 > 77");   //比较运算
+System.out.println(exp.getValue());                  
+```
+
+```java
+Expression exp = parser.parseExpression("99 + 99 * 3");   //算数运算
+System.out.println(exp.getValue());
+```
+
+对于那些需要导入才能使用的类，我们需要使用一个特殊的语法：              
+
+```java
+Expression exp = parser.parseExpression("T(java.lang.Math).random()");   //由T()囊括，包含完整包名+类名
+//Expression exp = parser.parseExpression("T(System).nanoTime()");   //默认导入的类可以不加包名
+System.out.println(exp.getValue());
+```
+
+### 3.3集合相关操作
+
+现在我们的类中存在一些集合类：                  
+
+```java
+@Component
+public class Student {
+    public Map<String, String> map = Map.of("test", "你干嘛");
+    public List<String> list = List.of("AAA", "BBB", "CCC");
+}
+```
+
+我们可以使用SpEL快速取出集合中的元素：
+
+```java
+Expression exp = parser.parseExpression("map['test']");  //对于Map这里映射型，可以直接使用map[key]来取出value
+System.out.println(exp.getValue(student));                 
+```
+
+```java
+Expression exp = parser.parseExpression("list[2]");   //对于List、数组这类，可以直接使用[index]
+System.out.println(exp.getValue(student));
+```
+
+我们也可以快速创建集合：                 
+
+```java
+Expression exp = parser.parseExpression("{5, 2, 1, 4, 6, 7, 0, 3, 9, 8}"); //使用{}来快速创建List集合
+List value = (List) exp.getValue();
+value.forEach(System.out::println);                  
+```
+
+```java
+Expression exp = parser.parseExpression("{{1, 2}, {3, 4}}");   //它是支持嵌套使用的                   
+```
+
+```java
+//创建Map也很简单，只需要key:value就可以了，怎么有股JSON味
+Expression exp = parser.parseExpression("{name: '小明', info: {address: '北京市朝阳区', tel: 10086}}");
+System.out.println(exp.getValue());
+```
+
+你以为就这么简单吗，我们还可以直接根据条件获取集合中的元素：             
+
+```java
+@Component
+public class Student {
+    public List<Clazz> list = List.of(new Clazz("高等数学", 4));
+
+    public record Clazz(String name, int score){ }
+}
+```
+
+```java
+//现在我们希望从list中获取那些满足我们条件的元素，并组成一个新的集合，我们可以使用.?运算符
+Expression exp = parser.parseExpression("list.?[name == '高等数学']");
+System.out.println(exp.getValue(student));                   
+```
+
+```java
+Expression exp = parser.parseExpression("list.?[score > 3]");   //选择学分大于3分的科目
+System.out.println(exp.getValue(student));
+```
+
+我们还可以针对某个属性创建对应的投影集合：                  
+
+```java
+Expression exp = parser.parseExpression("list.![name]");   //使用.!创建投影集合，这里创建的时课程名称组成的新集合
+System.out.println(exp.getValue(student));
+```
+
+![image-20221130153142677](https://oss.itbaima.cn/internal/markdown/2022/11/30/yLNHPJnWkoR3Cb2.png)
+
+**安全导航运算符**
+
+安全导航运算符用于避免NullPointerException，它来自Groovy语言。通常，当您有对对象的引用时，您可能需要在访问对象的方法或属性之前验证它是否为空。为了避免这种情况，安全导航运算符返回null而不是抛出异常。
+
+~~~java
+Expression exp = parser.parseExpression("name.toUpperCase()");   //如果Student对象中的name属性为null
+System.out.println(exp.getValue(student));
+~~~
+
+![image-20221130150723018](https://oss.itbaima.cn/internal/markdown/2022/11/30/dojeP5kYcM7KHiv.png)
+
+类似于这种判空问题，我们就可以直接使用安全导航运算符，SpEL也支持这种写法：
+
+```java
+Expression exp = parser.parseExpression("name?.toUpperCase()");
+System.out.println(exp.getValue(student));
+```
+
+当遇到空时，只会得到一个null，而不是直接抛出一个异常：
+
+![image-20221130150654287](https://oss.itbaima.cn/internal/markdown/2022/11/30/tOf3LFsWE4H8BVc.png)
+
+## 4.AOP面向切片
 
