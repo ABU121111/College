@@ -58,7 +58,7 @@ public static void main(String[] args) {
 }
 ~~~
 
-### 1.3Bean注册于配置
+### 1.3Bean注册与配置
 
 注册Bean的配置，同时对于接口来说如果没有声明则会直接调用声明的子类
 
@@ -791,3 +791,362 @@ System.out.println(exp.getValue(student));
 
 ## 4.AOP面向切片
 
+AOP是指在运行时，动态的将代码切入到类的指定方法，指定位置上，实际上就是代理，做代码增强。
+
+### 4.1使用配置实现AOP
+
+- 引入配置文件
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+</beans>
+~~~
+
+- 导入依赖
+
+~~~xml
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-aspects</artifactId>
+    <version>6.0.10</version>
+</dependency>
+~~~
+
+- 找到切点并注册为Bean
+
+~~~java
+public class Student {
+    public void study(){
+        System.out.println("室友还在打游戏，我狠狠的学Java，太爽了"); 
+      	//现在我们希望在这个方法执行完之后，打印一些其他的内容，在不修改原有代码的情况下，该怎么做呢？
+    }
+}
+~~~
+
+- 将增强操作注册为Bean
+
+~~~java
+public class StudentAOP {
+  	//这个方法就是我们打算对其进行的增强操作
+    public void afterStudy() {
+        System.out.println("为什么毕业了他们都继承家产，我还倒给他们打工，我努力的意义在哪里...");
+    }
+}
+~~~
+
+~~~xml
+<bean id="studentAOP" class="org.example.entity.StudentAOP"/>
+~~~
+
+- AOP配置
+
+~~~xml
+<aop:config>
+
+</aop:config>
+~~~
+
+然后增加切点id和表达式，这个表达式支持很多种方式进行选择，Spring AOP支持以下AspectJ切点指示器（PCD）用于表达式：
+
+- `execution`：用于匹配方法执行连接点。这是使用Spring AOP时使用的主要点切割指示器。
+
+  我们主要学习的`execution`填写格式如下：          
+
+  ```xml
+  修饰符 包名.类名.方法名称(方法参数)
+  ```
+
+  - 修饰符：public、protected、private、包括返回值类型、static等等（使用*代表任意修饰符）
+  - 包名：如com.test（* 代表全部，比如com.*代表com包下的全部包）
+  - 类名：使用*也可以代表包下的所有类
+  - 方法名称：可以使用*代表全部方法
+  - 方法参数：填写对应的参数即可，比如(String, String)，也可以使用*来代表任意一个参数，使用..代表所有参数。
+
+~~~xml
+<aop:pointcut id="test" expression=""/>
+~~~
+
+所以可以这么写
+
+~~~xml
+<aop:pointcut id="test" expression="execution(* org.example.entity.Student.study())"/>
+~~~
+
+然后需要添加`aop:aspect`标签，并使用`ref`属性将其指向我们刚刚注册的AOP类Bean：
+
+~~~xml
+<aop:config>
+    <aop:pointcut id="test" expression="execution(* org.example.entity.Student.study())"/>
+    <aop:aspect ref="studentAOP">
+				
+    </aop:aspect>
+</aop:config>
+~~~
+
+aop支持多个位置的切入，方法前，方法后，环绕等，以方法后为例
+
+~~~xml
+<aop:aspect ref="studentAOP">
+  	<!--     method就是我们的增强方法，pointcut-ref指向我们刚刚创建的切点     -->
+    <aop:after method="afterStudy" pointcut-ref="test"/>
+</aop:aspect>
+~~~
+
+- 通过添加一个JoinPoint参数，通过此参数就可以快速获取切点位置的一些信息：
+
+~~~java
+public void afterStudy(JoinPoint point) {   //JoinPoint实例会被自动传入
+    //这里我们直接通过getArgs()返回的参数数组获取第1个参数
+    System.out.println("学什么"+point.getArgs()[0]+"，Rust天下第一！");
+}
+~~~
+
+**环绕方法**：完全代理此方法，手动调用执行方法
+
+~~~java
+public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+    System.out.println("方法开始之前");
+    Object value = joinPoint.proceed();   //调用process方法来执行被代理的原方法，如果有返回值，可以使用value接收
+    System.out.println("方法执行完成，结果为："+value);
+  	return value;
+}
+~~~
+
+如果代理方法存在返回值，那么环绕方法也需要一个返回值
+
+~~~java
+public String study(String str){
+    if(str.equals("Java"))
+        System.out.println("我的梦想是学Java");
+    else {
+        System.out.println("我就要学Java，不要修改我的梦想！");
+        str = "Java";
+    }
+    return str;
+}
+~~~
+
+代理方法全方位覆盖
+
+~~~java
+//ProceedingJoinPoint是进程运行
+//JoinPoint用来使用参数
+public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+    System.out.println("我是她的家长，他不能学Java，必须学Rust，这是为他好");
+    Object value = joinPoint.proceed(new Object[]{"Rust"});
+    if(value.equals("Java")) {
+        System.out.println("听话，学Rust以后进大厂！");
+        value = "Rust";
+    }
+    return value;
+}
+~~~
+
+### 4.2使用注解实现AOP
+
+主配置类加@EnableAspectJAutoProxy，工具类注册bean，代理类添加`@Aspect`注解和`@Component`，方法加注解环绕或者之前之后等。
+
+首先需要在主配置类添加`@EnableAspectJAutoProxy`注解，开启AOP注解支持：
+
+~~~java
+@EnableAspectJAutoProxy
+@ComponentScan("org.example.entity")
+@Configuration
+public class MainConfiguration {
+}
+~~~
+
+然后对于工具类加上`@Component`快速注册Bean：         
+
+```java
+@Component
+public class Student {
+    public void study(){
+        System.out.println("我是学习方法！");
+    }
+}
+```
+
+接着我们需要在定义AOP增强操作的类上添加`@Aspect`注解和`@Component`将其注册为Bean即可，就像我们之前在配置文件中也要将其注册为Bean那样：                    
+
+```java
+@Aspect
+@Component
+public class StudentAOP {
+
+}
+```
+
+接着，我们可以在里面编写增强方法，并将此方法添加到一个切点中，比如我们希望在Student的study方法执行之前执行我们的`before`方法：                  
+
+```java
+public void before(){
+    System.out.println("我是之前执行的内容！");
+}
+```
+
+那么只需要添加@Before注解即可：            
+
+```java
+@Before("execution(* org.example.entity.Student.study())")  //execution写法跟之前一样
+public void before(){
+    System.out.println("我是之前执行的内容！");
+}
+```
+
+使用命名绑定模式，可以快速得到原方法的参数：           
+
+```java
+@Before(value = "execution(* org.example.entity.Student.study(..)) && args(str)", argNames = "str")
+//命名绑定模式就是根据下面的方法参数列表进行匹配
+//这里args指明参数，注意需要跟原方法保持一致，然后在argNames中指明
+public void before(String str){
+    System.out.println(str);   //可以快速得到传入的参数
+    System.out.println("我是之前执行的内容！");
+}
+```
+
+同样的，环绕也可以直接通过注解声明：                    
+
+```java
+@Around("execution(* com.test.bean.Student.test(..))")
+public Object around(ProceedingJoinPoint point) throws Throwable {
+    System.out.println("方法执行之前！");
+    Object val = point.proceed();
+    System.out.println("方法执行之后！");
+    return val;
+}
+```
+
+## 5.数据库框架
+
+### 5.1Mybatis整合
+
+将Mybatis与Spring更好的结合，将SqlSessionFactory交给IoC容器管理
+
+~~~xml
+<!-- 这两个依赖不用我说了吧 -->
+<dependency>
+    <groupId>org.mybatis</groupId>
+    <artifactId>mybatis</artifactId>
+  	<!-- 注意，对于Spring 6.0来说，版本需要在3.5以上 -->
+    <version>3.5.13</version>
+</dependency>
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>8.0.31</version>
+</dependency>
+<!-- Mybatis针对于Spring专门编写的支持框架 -->
+<dependency>
+    <groupId>org.mybatis</groupId>
+    <artifactId>mybatis-spring</artifactId>
+    <version>3.0.2</version>
+</dependency>
+<!-- Spring的JDBC支持框架 -->
+<dependency>
+     <groupId>org.springframework</groupId>
+     <artifactId>spring-jdbc</artifactId>
+     <version>6.0.10</version>
+</dependency>
+~~~
+
+依赖中提供SqlSessionTemplate类，它其实就是官方封装的一个工具类，我们可以将其注册为Bean，这样我们随时都可以向IoC容器索要对象，而不用自己再去编写一个工具类了，我们可以直接在配置类中创建。对于这种别人编写的类型，如果要注册为Bean，那么只能在配置类中完成：                  
+
+```java
+@Configuration
+@ComponentScan("org.example.entity")
+public class MainConfiguration {
+  	//注册SqlSessionTemplate的Bean
+    @Bean
+    public SqlSessionTemplate sqlSessionTemplate() throws IOException {
+        SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsReader("mybatis-config.xml"));
+        return new SqlSessionTemplate(factory);
+    }
+}
+```
+
+这里随便编写一个测试的Mapper类：               
+
+```java
+@Data
+public class Student {
+    private int sid;
+    private String name;
+    private String sex;
+}               
+```
+
+```java
+public interface TestMapper {
+    @Select("select * from student where sid = 1")
+    Student getStudent();
+}
+```
+
+最后是配置文件mybatis-config.xml
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/student_score"/>
+                <property name="username" value="root"/>
+                <property name="password" value=""/>
+            </dataSource>
+        </environment>
+    </environments>
+  	<mappers>
+        <mapper class="org.example.mapper.TestMapper"/>
+    </mappers>
+</configuration>
+~~~
+
+测试
+
+~~~java
+public static void main(String[] args) {
+    ApplicationContext context = new AnnotationConfigApplicationContext(MainConfiguration.class);
+    SqlSessionTemplate template = context.getBean(SqlSessionTemplate.class);
+    TestMapper testMapper = template.getMapper(TestMapper.class);
+    System.out.println(testMapper.getStudent());
+}
+~~~
+
+虽然这样已经很方便了，但是还不够方便，我们依然需要手动去获取Mapper对象，那么能否直接得到对应的Mapper对象呢，我们希望让Spring直接帮助我们管理所有的Mapper，当需要时，可以直接从容器中获取，我们可以直接在配置类上方添加注解：                      
+
+```java
+@Configuration
+@ComponentScan("org.example.entity")
+@MapperScan("org.example.mapper")
+public class MainConfiguration {
+```
+
+这样，Mybatis就会自动扫描对应包下所有的接口，并直接被注册为对应的Mapper作为Bean管理，那么我们现在就可以直接通过容器获取了：                 
+
+```java
+public static void main(String[] args) {
+    ApplicationContext context = new AnnotationConfigApplicationContext(MainConfiguration.class);
+    TestMapper mapper = context.getBean(TestMapper.class);
+    System.out.println(mapper.getStudent());
+}
+```
+
+### 5.2Mybatis事务管理
+
+1. ISOLATION_READ_UNCOMMITTED（读未提交）：其他事务会读取当前事务尚未更改的提交（相当于读取的是这个事务暂时缓存的内容，并不是数据库中的内容）
+2. ISOLATION_READ_COMMITTED（读已提交）：其他事务会读取当前事务已经提交的数据（也就是直接读取数据库中已经发生更改的内容）
+3. ISOLATION_REPEATABLE_READ（可重复读）：其他事务会读取当前事务已经提交的数据并且其他事务执行过程中不允许再进行数据修改（注意这里仅仅是不允许修改数据，允许插入删除等）
+4. ISOLATION_SERIALIZABLE（串行化）：它完全服从ACID原则，一个事务必须等待其他事务结束之后才能开始执行，相当于挨个执行，效率很低
