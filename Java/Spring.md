@@ -1150,3 +1150,101 @@ public static void main(String[] args) {
 2. ISOLATION_READ_COMMITTED（读已提交）：其他事务会读取当前事务已经提交的数据（也就是直接读取数据库中已经发生更改的内容）
 3. ISOLATION_REPEATABLE_READ（可重复读）：其他事务会读取当前事务已经提交的数据并且其他事务执行过程中不允许再进行数据修改（注意这里仅仅是不允许修改数据，允许插入删除等）
 4. ISOLATION_SERIALIZABLE（串行化）：它完全服从ACID原则，一个事务必须等待其他事务结束之后才能开始执行，相当于挨个执行，效率很低
+
+### 5.3Spring事务管理
+
+使用声明式事务非常简单，我们只需要在配置类添加`@EnableTransactionManagement`注解即可，这样就可以开启Spring的事务支持了。接着，我们只需要把一个事务要做的所有事情封装到Service层的一个方法中即可
+
+~~~java
+@EnableTransactionManagement
+@Configuration
+@ComponentScan("org.example.service")
+@MapperScan("org.example.mapper")
+public class MainConfiguration {
+    //注册SqlSessionTemplate的Bean
+    @Bean
+    public SqlSessionTemplate sqlSessionTemplate() throws IOException {
+        SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsReader("mybatis-config.xml"));
+        return new SqlSessionTemplate(factory);
+    }
+
+    //Spring事务管理
+    @Bean
+    public TransactionManager transactionManager(DataSource dataSource){
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+        @Bean
+    public DataSource dataSource() {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/student_score");
+        dataSource.setUsername("");
+        dataSource.setPassword("");
+        return dataSource;
+    }
+}
+~~~
+
+~~~java
+public interface TestMapper {
+//    @Select("select * from student_score where id = 2023090911")
+//    Student getStudent();
+    @Insert("insert into student_score(id,name,score_one,score_two) values(2023090929,'张三',90,80)")
+    void insertStudent();
+}
+
+~~~
+
+然后实现类，添加@Component注册，然后使用**@Transactional**表示事物，一旦发现异常会自动回滚
+
+~~~java
+@Component
+public class TestServiceImpl implements TestService{
+
+    @Autowired
+    TestMapper mapper;
+
+    @Transactional   //此注解表示事务，之后执行的所有方法都会在同一个事务中执行
+    public void test() {
+        mapper.insertStudent();
+        if(true) throw new RuntimeException("我是测试异常！");
+        mapper.insertStudent();
+    }
+}
+~~~
+
+### 5.4集成JUnit测试
+
+导入依赖
+
+~~~xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.0</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-test</artifactId>
+    <version>6.0.10</version>
+</dependency>
+~~~
+
+直接添加注解
+
+~~~java
+ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = MainConfiguration.class)
+public class MainTest {
+    @Autowired
+    TestService service;
+
+    @Test
+    public void test() {
+        service.test();
+    }
+}
+~~~
+
