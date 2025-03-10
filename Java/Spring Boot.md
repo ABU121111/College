@@ -699,3 +699,308 @@ void contextLoads() {
 }
 ~~~
 
+### 5.2方法名称拼接SQL
+
+| 属性               | 拼接方法名称示例                                            | 执行的语句                                                   |
+| ------------------ | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| Distinct           | findDistinctByLastnameAndFirstname                          | select distinct … where x.lastname = ?1 and x.firstname = ?2 |
+| And                | findByLastnameAndFirstname                                  | … where x.lastname = ?1 and x.firstname = ?2                 |
+| Or                 | findByLastnameOrFirstname                                   | … where x.lastname = ?1 or x.firstname = ?2                  |
+| Is，Equals         | findByFirstname`,`findByFirstnameIs`,`findByFirstnameEquals | … where x.firstname = ?1                                     |
+| Between            | findByStartDateBetween                                      | … where x.startDate between ?1 and ?2                        |
+| LessThan           | findByAgeLessThan                                           | … where x.age < ?1                                           |
+| LessThanEqual      | findByAgeLessThanEqual                                      | … where x.age <= ?1                                          |
+| GreaterThan        | findByAgeGreaterThan                                        | … where x.age > ?1                                           |
+| GreaterThanEqual   | findByAgeGreaterThanEqual                                   | … where x.age >= ?1                                          |
+| After              | findByStartDateAfter                                        | … where x.startDate > ?1                                     |
+| Before             | findByStartDateBefore                                       | … where x.startDate < ?1                                     |
+| IsNull，Null       | findByAge(Is)Null                                           | … where x.age is null                                        |
+| IsNotNull，NotNull | findByAge(Is)NotNull                                        | … where x.age not null                                       |
+| Like               | findByFirstnameLike                                         | … where x.firstname like ?1                                  |
+| NotLike            | findByFirstnameNotLike                                      | … where x.firstname not like ?1                              |
+| StartingWith       | findByFirstnameStartingWith                                 | … where x.firstname like ?1（参数与附加`%`绑定）             |
+| EndingWith         | findByFirstnameEndingWith                                   | … where x.firstname like ?1（参数与前缀`%`绑定）             |
+| Containing         | findByFirstnameContaining                                   | … where x.firstname like ?1（参数绑定以`%`包装）             |
+| OrderBy            | findByAgeOrderByLastnameDesc                                | … where x.age = ?1 order by x.lastname desc                  |
+| Not                | findByLastnameNot                                           | … where x.lastname <> ?1                                     |
+| In                 | findByAgeIn(Collection<Age> ages)                           | … where x.age in ?1                                          |
+| NotIn              | findByAgeNotIn(Collection<Age> ages)                        | … where x.age not in ?1                                      |
+| True               | findByActiveTrue                                            | … where x.active = true                                      |
+| False              | findByActiveFalse                                           | … where x.active = false                                     |
+| IgnoreCase         | findByFirstnameIgnoreCase                                   | … where UPPER(x.firstname) = UPPER(?1)                       |
+
+比如我们想要实现根据用户名模糊匹配查找用户：                    
+
+```java
+@Repository
+public interface AccountRepository extends JpaRepository<Account, Integer> {
+    //按照表中的规则进行名称拼接，不用刻意去记，IDEA会有提示
+    List<Account> findAllByUsernameLike(String str);
+}
+```
+
+测试一下
+
+~~~java
+@Test
+void contextLoads() {
+    repository.findAllByUsernameLike("%明%").forEach(System.out::println);
+}
+~~~
+
+### 5.3关联查询
+
+**一对一**
+
+定义数据库表
+
+~~~java
+@Data
+@Entity
+@Table(name = "account_detail")
+public class AccountDetail {
+
+    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    int id;
+
+    @Column(name = "address")
+    String address;
+
+    @Column(name = "email")
+    String email;
+
+    @Column(name = "phone")
+    String phone;
+
+    @Column(name = "real_name")
+    String realName;
+}
+~~~
+
+然后指定关联列
+
+~~~java
+@Data
+@Entity
+@Table(name = "account")
+public class Account {
+    @Id
+    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    int id;
+
+    @Column(name = "username")
+    String username;
+
+    @Column(name = "password")
+    String password;
+
+    @JoinColumn(name = "detail_id")   //指定存储外键的字段名称
+    @OneToOne    //声明为一对一关系
+    AccountDetail detail;
+
+}
+~~~
+
+然后可以快乐的调用方法
+
+~~~java
+    @Test
+    void pageAccount() {
+        repository.findById(1).ifPresent(System.out::println);
+    }
+
+~~~
+
+那么我们是否也可以在添加数据时，利用实体类之间的关联信息，一次性添加两张表的数据呢？可以，但是我们需要稍微修改一下级联关联操作设定：                 
+
+```java
+@JoinColumn(name = "detail_id")
+@OneToOne(cascade = CascadeType.ALL) //设置关联操作为ALL
+AccountDetail detail;
+```
+
+- ALL：所有操作都进行关联操作
+- PERSIST：插入操作时才进行关联操作
+- REMOVE：删除操作时才进行关联操作
+- MERGE：修改操作时才进行关联操作
+
+即可测试
+
+~~~java
+@Test
+void addAccount(){
+    Account account = new Account();
+    account.setUsername("Nike");
+    account.setPassword("123456");
+    AccountDetail detail = new AccountDetail();
+    detail.setAddress("重庆市渝中区解放碑");
+    detail.setPhone("1234567890");
+    detail.setEmail("73281937@qq.com");
+    detail.setRealName("张三");
+  	account.setDetail(detail);
+    account = repository.save(account);
+    System.out.println("插入时，自动生成的主键ID为："+account.getId()+"，外键ID为："+account.getDetail().getId());
+}
+~~~
+
+**一对多**
+
+接着我们来看一对多关联，比如每个用户的成绩信息：                
+
+```java
+@JoinColumn(name = "uid")  //注意这里的name指的是Score表中的uid字段对应的就是当前的主键，会将uid外键设置为当前的主键
+@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)   //在移除Account时，一并移除所有的成绩信息，依然使用懒加载
+List<Score> scoreList;              
+```
+
+```java
+@Data
+@Entity
+@Table(name = "users_score")   //成绩表，注意只存成绩，不存学科信息，学科信息id做外键
+public class Score {
+
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    @Id
+    int id;
+
+    @OneToOne   //一对一对应到学科上
+    @JoinColumn(name = "cid")
+    Subject subject;
+
+    @Column(name = "socre")
+    double score;
+
+    @Column(name = "uid")
+    int uid;
+}               
+```
+
+```java
+@Data
+@Entity
+@Table(name = "subjects")   //学科信息表
+public class Subject {
+
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cid")
+    @Id
+    int cid;
+
+    @Column(name = "name")
+    String name;
+
+    @Column(name = "teacher")
+    String teacher;
+
+    @Column(name = "time")
+    int time;
+}
+```
+
+在数据库中填写相应数据，接着我们就可以查询用户的成绩信息了：                
+
+```java
+@Transactional
+@Test
+void test() {
+    repository.findById(1).ifPresent(account -> {
+        account.getScoreList().forEach(System.out::println);
+    });
+}
+```
+
+成功得到用户所有的成绩信息，包括得分和学科信息。
+
+**多对一**
+
+同样的，我们还可以将对应成绩中的教师信息单独分出一张表存储，并建立多对一的关系，因为多门课程可能由同一个老师教授：               
+
+```java
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "tid")   //存储教师ID的字段，和一对一是一样的，也会当前表中创个外键
+Teacher teacher;
+```
+
+接着就是教师实体类了：                   
+
+```java
+@Data
+@Entity
+@Table(name = "teachers")
+public class Teacher {
+
+    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    int id;
+
+    @Column(name = "name")
+    String name;
+
+    @Column(name = "sex")
+    String sex;
+}
+```
+
+最后我们再进行一下测试：              
+
+```java
+@Transactional
+@Test
+void test() {
+    repository.findById(3).ifPresent(account -> {
+        account.getScoreList().forEach(score -> {
+            System.out.println("课程名称："+score.getSubject().getName());
+            System.out.println("得分："+score.getScore());
+            System.out.println("任课教师："+score.getSubject().getTeacher().getName());
+        });
+    });
+}
+```
+
+成功得到多对一的教师信息。
+
+**多对多**
+
+最后我们再来看最复杂的情况，现在我们一门课程可以由多个老师教授，而一个老师也可以教授多个课程，那么这种情况就是很明显的多对多场景，现在又该如何定义呢？我们可以像之前一样，插入一张中间表表示教授关系，这个表中专门存储哪个老师教哪个科目：         
+
+```java
+@ManyToMany(fetch = FetchType.LAZY)   //多对多场景
+@JoinTable(name = "teach_relation",     //多对多中间关联表
+        joinColumns = @JoinColumn(name = "cid"),    //当前实体主键在关联表中的字段名称
+        inverseJoinColumns = @JoinColumn(name = "tid")   //教师实体主键在关联表中的字段名称
+)
+List<Teacher> teacher;
+```
+
+接着，JPA会自动创建一张中间表，并自动设置外键，我们就可以将多对多关联信息编写在其中了。
+
+### 5.4JPQL自定义SQL语言
+
+例如实现根据用户名来修改密码
+
+~~~java
+@Repository
+public interface AccountRepository extends JpaRepository<Account, Integer> {
+
+    @Transactional    //DML操作需要事务环境，可以不在这里声明，但是调用时一定要处于事务环境下
+    @Modifying     //表示这是一个DML操作
+    @Query("update Account set password = ?2 where id = ?1") //这里操作的是一个实体类对应的表，参数使用?代表，后面接第n个参数
+    int updatePasswordById(int id, String newPassword);
+}
+~~~
+
+或者使用原生SQL
+
+~~~java
+@Transactional
+@Modifying
+@Query(value = "update users set password = :pwd where username = :name", nativeQuery = true) //使用原生SQL，和Mybatis一样，这里使用 :名称 表示参数，当然也可以继续用上面那种方式。
+int updatePasswordByUsername(@Param("name") String username,   //我们可以使用@Param指定名称
+                             @Param("pwd") String newPassword);
+~~~
+
