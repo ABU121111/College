@@ -4,6 +4,9 @@
 
 ~~~bash
 sudo apt install postgresql postgresql-contrib
+
+//redis
+sudo apt isntall redis-server
 ~~~
 
 具体解释如下：
@@ -28,6 +31,11 @@ sudo service postgresql start
 sudo service postgresql status
 sudo service postgresql stop
 sudo service postgresql restart
+
+//redis
+sudo service redis-server start
+//mysql
+sudo mysql -u root
 ~~~
 
 ## 4.添加密码
@@ -44,6 +52,8 @@ passwd: password updated successfully
 
 ~~~bash
 sudo -u postgres psql
+
+redis-cli
 ~~~
 
 退出使用快捷键Ctrl+D
