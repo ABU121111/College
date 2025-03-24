@@ -85,3 +85,23 @@ sudo -u postgres psql
 CREATE USER Bolt WITH PASSWORD '123123';
 ~~~
 
+## 8.修改配置文件
+
+1. 打开文件：
+
+   ```
+   bash
+   
+   
+   复制编辑
+   sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
+   ```
+
+2. 进入插入模式，按 `i`。
+
+3. 编辑内容。
+
+4. 保存并退出：
+
+   - 按 `Esc`
+   - 输入 `:wq` 回车。
