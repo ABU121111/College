@@ -89,14 +89,11 @@ CREATE USER Bolt WITH PASSWORD '123123';
 
 1. 打开文件：
 
-   ```
-   bash
-   
-   
+   ```bash
    复制编辑
    sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
    ```
-
+   
 2. 进入插入模式，按 `i`。
 
 3. 编辑内容。
@@ -105,3 +102,12 @@ CREATE USER Bolt WITH PASSWORD '123123';
 
    - 按 `Esc`
    - 输入 `:wq` 回车。
+
+## 9.RabbitMQ增加用户权限
+
+~~~bash
+sudo rabbitmqctl add_user admin your_password
+sudo rabbitmqctl set_user_tags admin administrator
+sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
+~~~
+
