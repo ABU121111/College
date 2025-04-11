@@ -83,6 +83,7 @@ sudo -u postgres psql
 
 ~~~sql
 CREATE USER Bolt WITH PASSWORD '123123';
+ALTER USER bolt WITH SUPERUSER;
 ~~~
 
 ## 8.修改配置文件
