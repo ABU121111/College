@@ -1142,3 +1142,413 @@ ReLU函数：![image-20250421230323413](DeepLearning.assets/image-20250421230323
 sigmoid函数：![image-20250421230359960](DeepLearning.assets/image-20250421230359960.png)
 
 tanh函数：![image-20250421230419473](DeepLearning.assets/image-20250421230419473.png)
+
+### 3.2手动实现多层感知机
+
+**导入库**
+
+~~~python
+import torch
+from torch import nn
+from d2l import torch as d2l
+
+batch_size = 256
+train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+~~~
+
+**初始化模型参数**
+
+~~~python
+num_inputs, num_outputs, num_hiddens = 784, 10, 256
+#定义形状并缩小一百倍，防止参数爆炸
+W1 = nn.Parameter(torch.randn(
+    num_inputs, num_hiddens, requires_grad=True) * 0.01)
+b1 = nn.Parameter(torch.zeros(num_hiddens, requires_grad=True))
+W2 = nn.Parameter(torch.randn(
+    num_hiddens, num_outputs, requires_grad=True) * 0.01)
+b2 = nn.Parameter(torch.zeros(num_outputs, requires_grad=True))
+
+params = [W1, b1, W2, b2]
+~~~
+
+**模型**
+
+~~~python
+def net(X):
+    #自动计算，-1只保存第一个维度(32, 1, 28, 28)->(32, 784)
+    X = X.reshape((-1, num_inputs))
+    H = relu(X@W1 + b1)  # 这里“@”代表矩阵乘法
+    return (H@W2 + b2)
+
+#简化版本
+net = nn.Sequential(nn.Flatten(),
+                    nn.Linear(784, 256),
+                    nn.ReLU(),
+                    nn.Linear(256, 10))
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.normal_(m.weight, std=0.01)
+
+net.apply(init_weights);
+~~~
+
+**损失函数**
+
+~~~python
+loss = nn.CrossEntropyLoss(reduction='none')
+~~~
+
+**训练**
+
+~~~python
+num_epochs, lr = 10, 0.1
+updater = torch.optim.SGD(params, lr=lr)
+d2l.train_ch3(net, train_iter, test_iter, loss, num_epochs, updater)	
+~~~
+
+### 3.3训练与验证
+
+**验证数据集**：一般是一半的训练数据集作为验证模型好坏的依据，如果不好那就换一个模型接着验证
+
+**测试数据集**：只用一次，不能用来调超参数，例如未来的考试
+
+### 3.4丢弃法
+
+- **丢弃法**将一些**输出项随机置0**来控制模型复杂度
+- 常作用在多层感知机的**隐藏层输出**上
+- **丢弃概率**是控制模型复杂度的超参数
+
+**初始化丢弃函数**
+
+~~~python
+import torch
+from torch import nn
+from d2l import torch as d2l
+
+
+def dropout_layer(X, dropout):
+    assert 0 <= dropout <= 1
+    # 在本情况中，所有元素都被丢弃
+    if dropout == 1:
+        return torch.zeros_like(X)
+    # 在本情况中，所有元素都被保留
+    if dropout == 0:
+        return X
+    #生成与X形状一样的0-1均匀分布的张量
+    mask = (torch.rand(X.shape) > dropout).float()
+    return mask * X / (1.0 - dropout)
+~~~
+
+![image-20250422173503381](DeepLearning.assets/image-20250422173503381.png)
+
+**定义模型参数**
+
+~~~python
+num_inputs, num_outputs, num_hiddens1, num_hiddens2 = 784, 10, 256, 256
+~~~
+
+**定义模型**：
+
+丢弃法应用于每个**隐藏层**的输出，在**激活函数**之后，常见的方法是对靠近输入层的隐藏层设置较低的丢弃概率
+
+~~~python
+dropout1, dropout2 = 0.2, 0.5
+
+class Net(nn.Module):
+    def __init__(self, num_inputs, num_outputs, num_hiddens1, num_hiddens2,
+                 is_training = True):
+        super(Net, self).__init__()
+        self.num_inputs = num_inputs
+        self.training = is_training
+        self.lin1 = nn.Linear(num_inputs, num_hiddens1)
+        self.lin2 = nn.Linear(num_hiddens1, num_hiddens2)
+        self.lin3 = nn.Linear(num_hiddens2, num_outputs)
+        self.relu = nn.ReLU()
+
+    def forward(self, X):
+        H1 = self.relu(self.lin1(X.reshape((-1, self.num_inputs))))
+        # 只有在训练模型时才使用dropout
+        if self.training == True:
+            # 在第一个全连接层之后添加一个dropout层
+            H1 = dropout_layer(H1, dropout1)
+        H2 = self.relu(self.lin2(H1))
+        if self.training == True:
+            # 在第二个全连接层之后添加一个dropout层
+            H2 = dropout_layer(H2, dropout2)
+        out = self.lin3(H2)
+        return out
+
+
+net = Net(num_inputs, num_outputs, num_hiddens1, num_hiddens2)
+~~~
+
+简化版本：
+
+~~~python
+net = nn.Sequential(nn.Flatten(),
+        nn.Linear(784, 256),
+        nn.ReLU(),
+        # 在第一个全连接层之后添加一个dropout层
+        nn.Dropout(dropout1),
+        nn.Linear(256, 256),
+        nn.ReLU(),
+        # 在第二个全连接层之后添加一个dropout层
+        nn.Dropout(dropout2),
+        nn.Linear(256, 10))
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.normal_(m.weight, std=0.01)
+
+net.apply(init_weights);
+~~~
+
+**训练和测试**：
+
+~~~python
+num_epochs, lr, batch_size = 10, 0.5, 256
+loss = nn.CrossEntropyLoss(reduction='none')
+train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
+trainer = torch.optim.SGD(net.parameters(), lr=lr)
+d2l.train_ch3(net, train_iter, test_iter, loss, num_epochs, trainer)
+~~~
+
+### 3.5分布偏移
+
+训练集与测试集的分布不同，导致模型效果变差
+
+1. **协变量偏移**：训练用数学题，测试用语文题，X改变但是评分标准（Y|X）没变
+2. **标签偏移**：题目X不变，但是分数Y萎了，导致本来能及格现在不能及格。
+3. **概念偏移**：本来是对的现在错了，概念改变。
+
+## 4.深度学习计算
+
+### 4.1层和块
+
+自定义块
+
+~~~python
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+class MLP(nn.Module):
+    # 用模型参数声明层。这里，我们声明两个全连接的层
+    def __init__(self):
+        # 调用MLP的父类Module的构造函数来执行必要的初始化。
+        # 这样，在类实例化时也可以指定其他函数参数，例如模型参数params（稍后将介绍）
+        super().__init__()
+        self.hidden = nn.Linear(20, 256)  # 隐藏层
+        self.out = nn.Linear(256, 10)  # 输出层
+
+    # 定义模型的前向传播，即如何根据输入X返回所需的模型输出
+    def forward(self, X):
+        # 注意，这里我们使用ReLU的函数版本，其在nn.functional模块中定义。
+        return self.out(F.relu(self.hidden(X)))
+~~~
+
+块里面可以有多个层或块
+
+~~~python
+class MySequential(nn.Module):
+    def __init__(self, *args):
+        super().__init__()
+        for idx, module in enumerate(args):
+            # 这里，module是Module子类的一个实例。我们把它保存在'Module'类的成员
+            # 变量_modules中。_module的类型是OrderedDict
+            self._modules[str(idx)] = module
+
+    def forward(self, X):
+        # OrderedDict保证了按照成员添加的顺序遍历它们
+        for block in self._modules.values():
+            X = block(X)
+        return X
+~~~
+
+### 4.2参数管理
+
+~~~python
+import torch
+from torch import nn
+
+net = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 1))
+X = torch.rand(size=(2, 4))
+net(X)
+~~~
+
+#### 4.2.1参数访问
+
+通过索引访问
+
+~~~python
+print(net[2].state_dict())
+~~~
+
+~~~python
+OrderedDict([('weight', tensor([[-0.0427, -0.2939, -0.1894,  0.0220, -0.1709, -0.1522, -0.0334, -0.2263]])), ('bias', tensor([0.0887]))])
+~~~
+
+知道名字之后即可通过名字访问
+
+~~~python
+print(type(net[2].bias))
+print(net[2].bias)
+print(net[2].bias.data)
+~~~
+
+~~~python
+<class 'torch.nn.parameter.Parameter'>
+Parameter containing:
+tensor([0.0887], requires_grad=True)
+tensor([0.0887])
+~~~
+
+也可以一次访问所有参数
+
+~~~python
+#*表示解包，拆开打印
+print(*[(name, param.shape) for name, param in net[0].named_parameters()])
+print(*[(name, param.shape) for name, param in net.named_parameters()])
+~~~
+
+~~~python
+('weight', torch.Size([8, 4])) ('bias', torch.Size([8]))
+('0.weight', torch.Size([8, 4])) ('0.bias', torch.Size([8])) ('2.weight', torch.Size([1, 8])) ('2.bias', torch.Size([1]))
+~~~
+
+衍生出Plus版本的访问方式
+
+~~~python
+net.state_dict()['2.bias'].data
+~~~
+
+~~~python
+tensor([0.0887])
+~~~
+
+如果多个块嵌套，那么也可以通过索引方式访问
+
+~~~python
+def block1():
+    return nn.Sequential(nn.Linear(4, 8), nn.ReLU(),
+                         nn.Linear(8, 4), nn.ReLU())
+
+def block2():
+    net = nn.Sequential()
+    for i in range(4):
+        # 在这里嵌套
+        net.add_module(f'block {i}', block1())
+    return net
+
+rgnet = nn.Sequential(block2(), nn.Linear(4, 1))
+print(rgnet)
+~~~
+
+~~~python
+Sequential(
+  (0): Sequential(
+    (block 0): Sequential(
+      (0): Linear(in_features=4, out_features=8, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=8, out_features=4, bias=True)
+      (3): ReLU()
+    )
+    (block 1): Sequential(
+      (0): Linear(in_features=4, out_features=8, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=8, out_features=4, bias=True)
+      (3): ReLU()
+    )
+    (block 2): Sequential(
+      (0): Linear(in_features=4, out_features=8, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=8, out_features=4, bias=True)
+      (3): ReLU()
+    )
+    (block 3): Sequential(
+      (0): Linear(in_features=4, out_features=8, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=8, out_features=4, bias=True)
+      (3): ReLU()
+    )
+  )
+  (1): Linear(in_features=4, out_features=1, bias=True)
+)
+~~~
+
+索引访问
+
+~~~python
+rgnet[0][1][0].bias.data
+~~~
+
+~~~python
+tensor([ 0.1999, -0.4073, -0.1200, -0.2033, -0.1573,  0.3546, -0.2141, -0.2483])
+~~~
+
+#### 4.2.2参数初始化
+
+**内置初始化**
+
+~~~python
+def init_normal(m):
+    if type(m) == nn.Linear:
+        nn.init.normal_(m.weight, mean=0, std=0.01)
+        nn.init.zeros_(m.bias)
+net.apply(init_normal)
+net[0].weight.data[0], net[0].bias.data[0]
+~~~
+
+~~~python
+(tensor([-0.0214, -0.0015, -0.0100, -0.0058]), tensor(0.))
+~~~
+
+**自定义初始化**
+
+~~~python
+def my_init(m):
+    if type(m) == nn.Linear:
+        print("Init", *[(name, param.shape)
+                        for name, param in m.named_parameters()][0])
+        nn.init.uniform_(m.weight, -10, 10)
+        m.weight.data *= m.weight.data.abs() >= 5
+
+net.apply(my_init)
+net[0].weight[:2]
+~~~
+
+我们始终可以直接设置参数
+
+~~~python
+net[0].weight.data[:] += 1
+net[0].weight.data[0, 0] = 42
+net[0].weight.data[0]
+~~~
+
+#### 4.2.3参数绑定
+
+定义一个稠密层，然后使用它的参数设置另一个层的参数。
+
+稠密层的梯度会加在一起。
+
+~~~python
+# 我们需要给共享层一个名称，以便可以引用它的参数
+shared = nn.Linear(8, 8)
+net = nn.Sequential(nn.Linear(4, 8), nn.ReLU(),
+                    shared, nn.ReLU(),
+                    shared, nn.ReLU(),
+                    nn.Linear(8, 1))
+net(X)
+# 检查参数是否相同
+print(net[2].weight.data[0] == net[4].weight.data[0])
+net[2].weight.data[0, 0] = 100
+# 确保它们实际上是同一个对象，而不只是有相同的值
+print(net[2].weight.data[0] == net[4].weight.data[0])
+~~~
+
+~~~python
+tensor([True, True, True, True, True, True, True, True])
+tensor([True, True, True, True, True, True, True, True])
+~~~
+
