@@ -1552,3 +1552,147 @@ tensor([True, True, True, True, True, True, True, True])
 tensor([True, True, True, True, True, True, True, True])
 ~~~
 
+### 4.3自定义层
+
+要实现基础层类并实现前向传播功能
+
+~~~python
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+
+class CenteredLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, X):
+        return X - X.mean()
+    
+#然后可以使用
+net = nn.Sequential(nn.Linear(8, 128), CenteredLayer())
+~~~
+
+### 4.4读写文件
+
+**加载和保存张量**
+
+~~~python
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+x = torch.arange(4)
+torch.save(x, 'x-file')
+~~~
+
+~~~python
+tensor([0, 1, 2, 3])
+~~~
+
+**加载和保存模型参数**：代码很难序列化，每次保存的实际上是参数
+
+~~~python
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.hidden = nn.Linear(20, 256)
+        self.output = nn.Linear(256, 10)
+
+    def forward(self, x):
+        return self.output(F.relu(self.hidden(x)))
+
+net = MLP()
+X = torch.randn(size=(2, 20))
+Y = net(X)
+~~~
+
+接下来保存模型参数
+
+~~~python
+torch.save(net.state_dict(), 'mlp.params')
+~~~
+
+然后读取参数
+
+~~~python
+clone = MLP()
+clone.load_state_dict(torch.load('mlp.params'))
+clone.eval()
+~~~
+
+~~~python
+MLP(
+  (hidden): Linear(in_features=20, out_features=256, bias=True)
+  (output): Linear(in_features=256, out_features=10, bias=True)
+)
+~~~
+
+由于参数一样，所以输入相同的X时，计算结果相同。
+
+~~~python
+Y_clone = clone(X)
+Y_clone == Y
+~~~
+
+~~~python
+tensor([[True, True, True, True, True, True, True, True, True, True],
+        [True, True, True, True, True, True, True, True, True, True]])
+~~~
+
+## 5.卷积神经网络
+
+### 5.1填充与步幅
+
+**填充**：填充行列0，减少数据丢失，增加输出维度
+
+![image-20250423221513803](DeepLearning.assets/image-20250423221513803.png)
+
+**步幅**：滑动大小，减少输出维度，可以指定两个方向的滑动
+
+### 5.2多输入多输出通道
+
+当有多个输入通道时，可以设置多个**卷积核**然后将运算结果**相加**得到单通道输出
+
+~~~python
+import torch
+from d2l import torch as d2l
+
+def corr2d_multi_in(X, K):
+    # 先遍历“X”和“K”的第0个维度（通道维度），再把它们加在一起
+    return sum(d2l.corr2d(x, k) for x, k in zip(X, K))
+~~~
+
+如果想输出多个通道，那么可以设置**多个三维卷积核**，最后输出多个通道。
+
+~~~python
+def corr2d_multi_in_out(X, K):
+    # 迭代“K”的第0个维度，每次都对输入“X”执行互相关运算。
+    # 最后将所有结果都叠加在一起
+    return torch.stack([corr2d_multi_in(X, k) for k in K], 0)
+~~~
+
+~~~python
+#生成三个卷积核堆叠
+K = torch.stack((K, K + 1, K + 2), 0)
+K.shape
+~~~
+
+1*1卷积层类似一个**全连接层**
+
+### 5.3池化层 
+
+用来保留主要特征，增强鲁棒性，分为**最大池化**和**平均池化**，都有步长和填充等操作。
+
+![image-20250423225915746](DeepLearning.assets/image-20250423225915746.png)
+
+~~~python
+X = torch.arange(16, dtype=torch.float32).reshape((1, 1, 4, 4))
+#按维度拼接，非拼接维度必须相同
+X = torch.cat((X, X + 1), 1)
+pool2d = nn.MaxPool2d(3, padding=1, stride=2)
+pool2d(X)
+~~~
+
+### 5.4卷积神经网络LeNet
+
