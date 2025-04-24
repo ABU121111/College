@@ -1289,9 +1289,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 ```
 
-接着我们就可以开始编写自动生成脚本了，这里依然选择测试类，用到`FastAutoGenerator`作为生成器：
-
-​              java              复制代码                          
+接着我们就可以开始编写自动生成脚本了，这里依然选择测试类，用到`FastAutoGenerator`作为生成器：                   
 
 ```java
 		@Test

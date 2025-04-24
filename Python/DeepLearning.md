@@ -1696,3 +1696,144 @@ pool2d(X)
 
 ### 5.4卷积神经网络LeNet
 
+识别手写数字，两个卷积两个池化后全连接，最后用softmax预测概率
+
+下载并加载数据集
+
+~~~python
+def load_data_fashion_mnist(batch_size, resize=None):  #@save
+    """下载Fashion-MNIST数据集，然后将其加载到内存中"""
+    trans = [transforms.ToTensor()]
+    if resize:
+        trans.insert(0, transforms.Resize(resize))
+    trans = transforms.Compose(trans)
+    mnist_train = torchvision.datasets.FashionMNIST(
+        root="./data", train=True, transform=trans, download=True)
+    mnist_test = torchvision.datasets.FashionMNIST(
+        root="./data", train=False, transform=trans, download=True)
+    return (data.DataLoader(mnist_train, batch_size, shuffle=True),
+            data.DataLoader(mnist_test, batch_size, shuffle=False))
+~~~
+
+定义模型
+
+~~~python
+import torch
+from torch import nn
+from d2l import torch as d2l
+#定义模型
+net = nn.Sequential(
+    nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Conv2d(6, 16, kernel_size=5), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Flatten(),
+    nn.Linear(16 * 5 * 5, 120), nn.Sigmoid(),
+    nn.Linear(120, 84), nn.Sigmoid(),
+    nn.Linear(84, 10))
+~~~
+
+![../_images/lenet-vert.svg](https://zh-v2.d2l.ai/_images/lenet-vert.svg)
+
+实例
+
+~~~python
+X = torch.rand(size=(1, 1, 28, 28), dtype=torch.float32)
+for layer in net:
+    X = layer(X)
+    print(layer.__class__.__name__,'output shape: \t',X.shape)
+~~~
+
+~~~python
+Conv2d output shape:         torch.Size([1, 6, 28, 28])
+Sigmoid output shape:        torch.Size([1, 6, 28, 28])
+AvgPool2d output shape:      torch.Size([1, 6, 14, 14])
+Conv2d output shape:         torch.Size([1, 16, 10, 10])
+Sigmoid output shape:        torch.Size([1, 16, 10, 10])
+AvgPool2d output shape:      torch.Size([1, 16, 5, 5])
+Flatten output shape:        torch.Size([1, 400])
+Linear output shape:         torch.Size([1, 120])
+Sigmoid output shape:        torch.Size([1, 120])
+Linear output shape:         torch.Size([1, 84])
+Sigmoid output shape:        torch.Size([1, 84])
+Linear output shape:         torch.Size([1, 10])
+~~~
+
+**训练函数**：
+
+~~~python
+def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
+    """用GPU训练模型(在第六章定义)"""
+    def init_weights(m):
+        if type(m) == nn.Linear or type(m) == nn.Conv2d:
+            nn.init.xavier_uniform_(m.weight)
+    net.apply(init_weights)
+    print('training on', device)
+    net.to(device)
+    optimizer = torch.optim.SGD(net.parameters(), lr=lr)
+    loss = nn.CrossEntropyLoss()
+    num_batches =len(train_iter)
+
+    # 用于记录每个epoch的训练损失、训练准确率和测试准确率
+    train_losses, train_accuracies, test_accuracies = [], [], []
+
+    for epoch in range(num_epochs):
+        # 训练损失之和，训练准确率之和，样本数
+        metric = Accumulator(3)
+        net.train()
+        for i, (X, y) in enumerate(train_iter):
+            optimizer.zero_grad()
+            X, y = X.to(device), y.to(device)
+            y_hat = net(X)
+            l = loss(y_hat, y)
+            l.backward()
+            optimizer.step()
+            with torch.no_grad():
+                metric.add(l * X.shape[0], accuracy(y_hat, y), X.shape[0])
+            train_l = metric[0] / metric[2]
+            train_acc = metric[1] / metric[2]
+        test_acc = evaluate_accuracy_gpu(net, test_iter)
+
+        # 记录当前epoch的结果
+        train_losses.append(train_l)
+        train_accuracies.append(train_acc)
+        test_accuracies.append(test_acc)
+
+        print(f'epoch {epoch + 1}, loss {train_l:.3f}, train acc {train_acc:.3f}, test acc {test_acc:.3f}')
+
+    # 绘制训练损失和准确率
+    epochs = range(1, num_epochs + 1)
+    plt.figure(figsize=(12, 4))
+
+    # 绘制训练损失
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_losses, label='Train Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training Loss')
+    plt.legend()
+
+    # 绘制训练和测试准确率
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_accuracies, label='Train Accuracy')
+    plt.plot(epochs, test_accuracies, label='Test Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Training and Test Accuracy')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+~~~
+
+**执行代码**;
+
+~~~python
+#加载数据集
+batch_size = 256
+train_iter, test_iter = load_data_fashion_mnist(batch_size)
+#开始训练
+lr, num_epochs = 0.9, 10
+train_ch6(net, train_iter, test_iter, num_epochs, lr, torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+~~~
+
