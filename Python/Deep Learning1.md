@@ -1,4 +1,4 @@
-# DeepLearning
+# Deep Learning
 
 ## 1.预备知识
 
@@ -905,6 +905,7 @@ net = nn.Sequential(nn.Flatten(), nn.Linear(784, 10))
 # 初始化权重参数，方差为0.01
 def init_weights(m):
     if type(m) == nn.Linear:
+        #原地操作，直接修改
         nn.init.normal_(m.weight, std=0.01)
 
 net.apply(init_weights);
@@ -1641,6 +1642,10 @@ tensor([[True, True, True, True, True, True, True, True, True, True],
 ~~~
 
 ## 5.卷积神经网络
+
+$$
+\text{输出特征图的大小} = \left\lfloor \frac{\text{输入特征图的大小} - \text{池化核的大小} + 2 \times \text{填充}}{\text{步幅}} \right\rfloor + 1
+$$
 
 ### 5.1填充与步幅
 
