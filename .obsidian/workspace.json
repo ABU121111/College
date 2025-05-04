@@ -20,21 +20,8 @@
               "icon": "lucide-file",
               "title": "Deep Learning1"
             }
-          },
-          {
-            "id": "998c5cca845c2e5c",
-            "type": "leaf",
-            "state": {
-              "type": "release-notes",
-              "state": {
-                "currentVersion": "1.8.10"
-              },
-              "icon": "lucide-book-up",
-              "title": "Release Notes 1.8.10"
-            }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -181,7 +168,7 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "998c5cca845c2e5c",
+  "active": "287333cc9bcf6f47",
   "lastOpenFiles": [
     "大二下/数据库.md",
     "操作系统作业/操作系统第二次作业.md",
