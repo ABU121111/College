@@ -120,3 +120,5 @@ net = nn.Sequential(
     nn.Flatten())
 ~~~
 
+### 6.4批量归一化
+
