@@ -112,3 +112,4 @@ sudo rabbitmqctl set_user_tags admin administrator
 sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
 ~~~
 
+https://blog.csdn.net/weixin_45962477/article/details/129064751
