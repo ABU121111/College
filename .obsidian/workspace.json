@@ -11,14 +11,17 @@
             "id": "287333cc9bcf6f47",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Python/Deep Learning1.md",
-                "mode": "source",
-                "source": false
+                "file": "未命名.canvas",
+                "viewState": {
+                  "x": 0,
+                  "y": 0,
+                  "zoom": 0
+                }
               },
-              "icon": "lucide-file",
-              "title": "Deep Learning1"
+              "icon": "lucide-layout-dashboard",
+              "title": "未命名"
             }
           }
         ]
@@ -170,6 +173,8 @@
   },
   "active": "287333cc9bcf6f47",
   "lastOpenFiles": [
+    "未命名.canvas",
+    "Python/Deep Learning1.md",
     "大二下/数据库.md",
     "操作系统作业/操作系统第二次作业.md",
     "大二下/操作系统.md"
