@@ -1,6 +1,8 @@
 {
-  "attachmentFolderPath": "./image",
+  "attachmentFolderPath": "./assets",
   "readableLineLength": true,
   "alwaysUpdateLinks": true,
-  "newFileLocation": "current"
+  "newFileLocation": "current",
+  "newLinkFormat": "relative",
+  "useMarkdownLinks": true
 }

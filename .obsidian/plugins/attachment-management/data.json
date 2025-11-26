@@ -1,0 +1,19 @@
+{
+  "language": "en",
+  "attachPath": {
+    "attachmentRoot": "./assets",
+    "saveAttE": "inFolderBelow",
+    "attachmentPath": "${notename}.assets",
+    "attachFormat": "${originalname}",
+    "type": "GLOBAL"
+  },
+  "dateFormat": "YYYYMMDDHHmmssSSS",
+  "excludeExtensionPattern": "",
+  "autoRenameAttachment": false,
+  "excludedPaths": "",
+  "excludePathsArray": [],
+  "excludeSubpaths": false,
+  "originalNameStorage": [],
+  "overridePath": {},
+  "disableNotification": false
+}
