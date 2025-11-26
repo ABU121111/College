@@ -88,7 +88,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 398.5
+    "width": 200
   },
   "right": {
     "id": "f8c2547a2ca6c23e",
@@ -123,12 +123,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "操作系统作业/操作系统第二次作业.md",
+                "file": "大三上/智能控制.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "操作系统第二次作业 的出链列表"
+              "title": "智能控制 的出链列表"
             }
           },
           {
@@ -160,13 +160,23 @@
               "icon": "lucide-list",
               "title": "操作系统第二次作业 的大纲"
             }
+          },
+          {
+            "id": "e221227eb78aab45",
+            "type": "leaf",
+            "state": {
+              "type": "git-view",
+              "state": {},
+              "icon": "git-pull-request",
+              "title": "Source Control"
+            }
           }
-        ]
+        ],
+        "currentTab": 4
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -180,7 +190,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "9cc17193eaacac5e",
+  "active": "e221227eb78aab45",
   "lastOpenFiles": [
     "大三上/assets/智能控制.assets/Pasted image 20251126230731.png",
     "大三上/assets/智能控制.assets/Pasted image 20251126230722.png",
