@@ -4,24 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "c98ad4b91fdbae6a",
+        "id": "2ec4122575ab3116",
         "type": "tabs",
         "children": [
           {
-            "id": "287333cc9bcf6f47",
+            "id": "9cc17193eaacac5e",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "未命名.canvas",
-                "viewState": {
-                  "x": 0,
-                  "y": 0,
-                  "zoom": 0
-                }
+                "file": "大三上/智能控制.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-layout-dashboard",
-              "title": "未命名"
+              "icon": "lucide-file",
+              "title": "智能控制"
             }
           }
         ]
@@ -163,15 +160,17 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "bases:创建新数据库": false,
       "switcher:打开快速切换": false,
       "graph:查看关系图谱": false,
       "canvas:新建白板": false,
       "daily-notes:打开/创建今天的日记": false,
       "templates:插入模板": false,
-      "command-palette:打开命令面板": false
+      "command-palette:打开命令面板": false,
+      "obsidian-git:Open Git source control": false
     }
   },
-  "active": "287333cc9bcf6f47",
+  "active": "de660613ddd34d1a",
   "lastOpenFiles": [
     "未命名.canvas",
     "Python/Deep Learning1.md",
