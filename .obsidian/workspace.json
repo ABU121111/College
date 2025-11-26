@@ -176,7 +176,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -190,7 +191,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "e221227eb78aab45",
+  "active": "9cc17193eaacac5e",
   "lastOpenFiles": [
     "大三上/assets/智能控制.assets/Pasted image 20251126230731.png",
     "大三上/assets/智能控制.assets/Pasted image 20251126230722.png",
