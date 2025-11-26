@@ -1,3 +1,38 @@
 body {
-  --line-height-normal: 1.8;
+    --paragraph-margin-top:10px;
+    --paragraph-margin-bottom:5px;
+    --line-height-normal: 1.6;
 }
+div:not(.HyperMD-header,.HyperMD-list-line).cm-line {
+    padding-top:var(--paragraph-margin-top) !important;
+    padding-bottom:var(--paragraph-margin-bottom) !important;
+}
+div:not(.HyperMD-header,.HyperMD-list-line).cm-line:has(.cm-fold-indicator) {
+    padding-top:unset !important;
+    padding-bottom:unset !important;
+}
+div:not(.HyperMD-header,.HyperMD-list-line).cm-line:has(.cm-hmd-frontmatter) {
+    padding-top:unset !important;
+    padding-bottom:unset !important;
+}
+/* @settings
+name: Things Theme optimize
+id: things-style-optimize
+settings:
+    -
+        id: paragraph
+        title: 段落间距调整
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: paragraph-margin-top
+        title: 段前间距
+        type: variable-text
+        default: 5px
+    -
+        id: paragraph-margin-bottom
+        title: 段后间距
+        type: variable-text
+        default: 5px    
+*/
