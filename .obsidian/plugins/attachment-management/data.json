@@ -2,7 +2,7 @@
   "language": "en",
   "attachPath": {
     "attachmentRoot": "./assets",
-    "saveAttE": "inFolderBelow",
+    "saveAttE": "obsFolder",
     "attachmentPath": "${notename}.assets",
     "attachFormat": "${originalname}",
     "type": "GLOBAL"
@@ -13,7 +13,16 @@
   "excludedPaths": "",
   "excludePathsArray": [],
   "excludeSubpaths": false,
-  "originalNameStorage": [],
+  "originalNameStorage": [
+    {
+      "n": "Pasted image 20251126225345",
+      "md5": "69A04D0C40DD66EB573C876A04DDCCF4"
+    },
+    {
+      "n": "Pasted image 20251126225426",
+      "md5": "BBF76E29F965E8F23C0B56E32F84E8F5"
+    }
+  ],
   "overridePath": {},
   "disableNotification": false
 }

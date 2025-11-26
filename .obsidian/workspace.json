@@ -75,7 +75,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "path:\"大三上/\" ",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -192,8 +192,13 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "de660613ddd34d1a",
+  "active": "9cc17193eaacac5e",
   "lastOpenFiles": [
+    "assets/智能控制.assets/Pasted image 20251126225426.png",
+    "assets/智能控制.assets",
+    "assets",
+    "assets/智能控制.assets/Pasted image 20251126225345.png",
+    "大三上/assets",
     "大三上/image/4da8c124-41e6-448b-9c96-5e58ee23bb89.png",
     "大三上/image/dffa79e4-2ef0-4246-b2da-e7f4cffa0e67.png",
     "大三上/智能控制.md",
