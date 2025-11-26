@@ -1,4 +1,6 @@
 {
-  "attachmentFolderPath": "./",
-  "readableLineLength": false
+  "attachmentFolderPath": "./image",
+  "readableLineLength": true,
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "current"
 }
