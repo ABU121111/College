@@ -78,7 +78,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "f8c2547a2ca6c23e",
@@ -170,7 +171,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "de660613ddd34d1a",
+  "active": "9cc17193eaacac5e",
   "lastOpenFiles": [
     "未命名.canvas",
     "Python/Deep Learning1.md",
