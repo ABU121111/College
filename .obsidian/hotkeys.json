@@ -72,24 +72,6 @@
       "key": "M"
     }
   ],
-  "editor:toggle-numbered-list": [
-    {
-      "modifiers": [
-        "Mod",
-        "Shift"
-      ],
-      "key": "["
-    }
-  ],
-  "editor:toggle-bullet-list": [
-    {
-      "modifiers": [
-        "Mod",
-        "Shift"
-      ],
-      "key": "]"
-    }
-  ],
   "obsidian-git:commit": [
     {
       "modifiers": [
@@ -115,6 +97,24 @@
         "Mod"
       ],
       "key": "3"
+    }
+  ],
+  "editor:toggle-bullet-list": [
+    {
+      "modifiers": [
+        "Mod",
+        "Shift"
+      ],
+      "key": "7"
+    }
+  ],
+  "editor:toggle-numbered-list": [
+    {
+      "modifiers": [
+        "Mod",
+        "Shift"
+      ],
+      "key": "8"
     }
   ]
 }
