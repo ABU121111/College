@@ -104,7 +104,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 319.5
+    "width": 301.5
   },
   "right": {
     "id": "f8c2547a2ca6c23e",
@@ -207,7 +207,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "444a2558af3c12f8",
+  "active": "9cc17193eaacac5e",
   "lastOpenFiles": [
     "大三上/assets/Pasted image 20251203200345.png",
     "大三上/assets/Pasted image 20251203200342.png",
