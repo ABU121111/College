@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "大三上/未命名.md",
+                "file": "Git/Git.md",
                 "mode": "source",
                 "source": false,
                 "backlinks": true,
@@ -28,7 +28,7 @@
                 }
               },
               "icon": "lucide-file",
-              "title": "未命名"
+              "title": "Git"
             }
           }
         ]
@@ -209,8 +209,8 @@
   },
   "active": "9cc17193eaacac5e",
   "lastOpenFiles": [
-    "大三上/智能控制.md",
     "大三上/未命名.md",
+    "大三上/智能控制.md",
     "大三上/assets/Pasted image 20251203200345.png",
     "大三上/assets/Pasted image 20251203200342.png",
     "大三上/assets/智能控制.assets/Pasted image 20251201180615.png",
