@@ -103,7 +103,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 301.5
+    "width": 200
   },
   "right": {
     "id": "f8c2547a2ca6c23e",
@@ -138,12 +138,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "大三上/智能控制.md",
+                "file": "大三上/未命名.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "智能控制 的出链列表"
+              "title": "未命名 的出链列表"
             }
           },
           {
