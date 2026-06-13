@@ -116,5 +116,13 @@
       ],
       "key": "8"
     }
+  ],
+  "editor:attach-file": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "R"
+    }
   ]
 }
